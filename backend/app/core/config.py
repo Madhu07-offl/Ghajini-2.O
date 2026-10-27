@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     DEFAULT_PATIENT_ID: int = 1
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=[".env", "backend/.env", str(Path(__file__).resolve().parent.parent.parent / ".env")],
         env_file_encoding="utf-8",
         extra="ignore"
     )
