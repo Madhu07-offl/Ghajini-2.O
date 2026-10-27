@@ -1,4 +1,4 @@
-# Ghajini 2.0 - AI Memory Companion for Alzheimer's Patients
+# Ghajini 2.0 - AI Memory Companion for Alzheimer's Patients.
 
 A full-stack, local-first AI memory companion designed specifically for Alzheimer's patients and their caregivers. It features high-accuracy face recognition, grounded semantic memory retrieval, Ollama LLM integration, offline voice transcription with faster-whisper, automated medication reminders with iCal RRULE escalation, emergency phrase interception, caregiver alerts, Caregiver Analytics Dashboard, and a high-contrast elderly-friendly UI.
 
