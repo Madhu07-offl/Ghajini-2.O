@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from urllib.parse import urlparse
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 import httpx
 
 from app.core.config import settings
@@ -15,6 +16,7 @@ from app.modules.alerts.router import router as alerts_router
 from app.modules.chat.llm_client import ollama_client
 from app.modules.chat.router import router as chat_router
 from app.modules.dashboard.router import router as dashboard_router
+from app.modules.dashboard.web import get_dashboard_html
 from app.modules.demo.router import router as demo_router
 from app.modules.faces.engine import face_engine
 from app.modules.memory.retrieval import memory_retrieval
@@ -96,6 +98,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/dashboard", response_class=HTMLResponse, tags=["dashboard"])
+@app.get("/", response_class=HTMLResponse, tags=["dashboard"])
+def serve_caregiver_dashboard():
+    """Serves the interactive web-based Caregiver Dashboard."""
+    return get_dashboard_html()
 
 
 @app.get("/health")
