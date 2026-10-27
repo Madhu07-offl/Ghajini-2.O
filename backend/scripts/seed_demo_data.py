@@ -181,8 +181,12 @@ def seed_data() -> None:
             reminder = Reminder(
                 patient_id=pid,
                 title="Take Blood Pressure Medication (Amlodipine 5mg)",
+                message="Take one tablet with a full glass of warm water after breakfast.",
                 scheduled_time="09:00",
                 frequency="daily",
+                rrule="FREQ=DAILY",
+                is_critical=True,
+                escalate_after_min=10,
                 status="pending",
             )
             db.add(reminder)
@@ -193,6 +197,7 @@ def seed_data() -> None:
                 patient_id=pid,
                 reminder_id=reminder.id,
                 action="created",
+                outcome="ignored",
                 details="Daily 9:00 AM blood pressure reminder initialized.",
             )
             db.add(log)

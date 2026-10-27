@@ -25,6 +25,30 @@ def init_db() -> None:
     from app.db import models  # noqa: F401
     Base.metadata.create_all(bind=engine)
 
+    # SQLite auto-migration for newly added columns
+    try:
+        with engine.connect() as conn:
+            reminders_cols = [row[1] for row in conn.exec_driver_sql("PRAGMA table_info(reminders)").fetchall()]
+            if reminders_cols:
+                if "message" not in reminders_cols:
+                    conn.exec_driver_sql("ALTER TABLE reminders ADD COLUMN message TEXT")
+                if "rrule" not in reminders_cols:
+                    conn.exec_driver_sql("ALTER TABLE reminders ADD COLUMN rrule VARCHAR(255)")
+                if "is_critical" not in reminders_cols:
+                    conn.exec_driver_sql("ALTER TABLE reminders ADD COLUMN is_critical BOOLEAN DEFAULT 0")
+                if "escalate_after_min" not in reminders_cols:
+                    conn.exec_driver_sql("ALTER TABLE reminders ADD COLUMN escalate_after_min INTEGER DEFAULT 10")
+                if "next_run_at" not in reminders_cols:
+                    conn.exec_driver_sql("ALTER TABLE reminders ADD COLUMN next_run_at DATETIME")
+
+            logs_cols = [row[1] for row in conn.exec_driver_sql("PRAGMA table_info(reminder_logs)").fetchall()]
+            if logs_cols:
+                if "outcome" not in logs_cols:
+                    conn.exec_driver_sql("ALTER TABLE reminder_logs ADD COLUMN outcome VARCHAR(40) DEFAULT 'ignored'")
+            conn.commit()
+    except Exception:
+        pass
+
     # Ensure default patient exists
     db = SessionLocal()
     try:

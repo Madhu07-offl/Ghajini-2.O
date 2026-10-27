@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 import 'package:ghajini_app/screens/add_person_screen.dart';
 import 'package:ghajini_app/screens/ask_screen.dart';
+import 'package:ghajini_app/screens/caregiver_screen.dart';
 import 'package:ghajini_app/screens/home_screen.dart';
 import 'package:ghajini_app/screens/recognize_screen.dart';
 
@@ -22,6 +23,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/add-person',
       builder: (context, state) => const AddPersonScreen(),
+    ),
+    GoRoute(
+      path: '/caregiver',
+      builder: (context, state) => const CaregiverScreen(),
     ),
   ],
 );

@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.db.models import Memory, PersonFace
 from app.db.session import SessionLocal, init_db
+from app.modules.alerts.router import router as alerts_router
 from app.modules.chat.router import router as chat_router
 from app.modules.faces.engine import face_engine
 from app.modules.memory.retrieval import memory_retrieval
@@ -14,6 +15,8 @@ from app.modules.people.router import router as people_router
 from app.modules.privacy.router import router as privacy_router
 from app.modules.reminders.router import router as reminders_router
 from app.modules.reminders.scheduler import start_scheduler, stop_scheduler
+from app.modules.voice.router import router as voice_router
+from app.modules.voice.transcriber import voice_transcriber
 
 logging.basicConfig(
     level=logging.INFO,
@@ -50,6 +53,7 @@ async def lifespan(app: FastAPI):
     settings.init_directories()
     init_db()
     preload_indices()
+    voice_transcriber.load()
     start_scheduler()
     yield
     # Shutdown
@@ -98,5 +102,7 @@ app.add_api_route(
 )
 app.include_router(memory_router, prefix=f"{v1_prefix}/memories", tags=["memory"])
 app.include_router(chat_router, prefix=v1_prefix, tags=["chat"])  # contains /v1/ask
+app.include_router(voice_router, prefix=f"{v1_prefix}/voice", tags=["voice"])
+app.include_router(alerts_router, prefix=f"{v1_prefix}/alerts", tags=["alerts"])
 app.include_router(reminders_router, prefix=f"{v1_prefix}/reminders", tags=["reminders"])
 app.include_router(privacy_router, prefix=f"{v1_prefix}/privacy", tags=["privacy"])

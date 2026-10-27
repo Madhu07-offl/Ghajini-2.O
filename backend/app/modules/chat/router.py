@@ -6,7 +6,9 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.db.models import Memory
 from app.db.session import get_db
+from app.modules.alerts.service import notify_caregivers
 from app.modules.chat.llm_client import ollama_client
+from app.modules.chat.prompts import get_emergency_response, is_emergency_phrase
 from app.modules.memory.retrieval import memory_retrieval
 
 router = APIRouter()
@@ -30,6 +32,23 @@ async def ask_memory(
     db: Session = Depends(get_db),
 ):
     pid = payload.patient_id or settings.DEFAULT_PATIENT_ID
+    requested_lang = (payload.lang or "en").lower()[:2]
+    if requested_lang not in ("en", "hi", "pa"):
+        requested_lang = "en"
+
+    # Emergency phrase detection BEFORE calling LLM
+    if is_emergency_phrase(payload.text):
+        notify_caregivers(
+            patient_id=pid,
+            alert_type="emergency_phrase",
+            message=f"Emergency phrase detected in patient question: '{payload.text}'",
+            db=db,
+        )
+        return AskResponse(
+            answer=get_emergency_response(requested_lang),
+            grounded=True,
+            sources=["Emergency detection: Caregiver alert triggered."],
+        )
 
     # 1. Retrieve top 5 matching memories
     scored_memories = memory_retrieval.search(payload.text, k=5)
@@ -52,7 +71,7 @@ async def ask_memory(
     answer, grounded = await ollama_client.generate_answer(
         question=payload.text,
         facts=facts,
-        lang=payload.lang,
+        lang=requested_lang,
     )
 
     return AskResponse(

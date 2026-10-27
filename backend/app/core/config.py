@@ -18,6 +18,25 @@ class Settings(BaseSettings):
     OLLAMA_MAX_TOKENS: int = 120
     OLLAMA_TIMEOUT_SECONDS: float = 15.0
 
+    # Whisper settings
+    WHISPER_MODEL: str = "small"
+
+    # Feature flags & Alerts
+    FEATURE_PUSH: bool = False
+    FEATURE_SMS: bool = False
+    TWILIO_ACCOUNT_SID: str = ""
+    TWILIO_AUTH_TOKEN: str = ""
+    TWILIO_FROM_NUMBER: str = ""
+    CAREGIVER_PHONE: str = "+919876543210"
+
+    # Privacy controls
+    STORE_PHOTOS: bool = False  # Do not store raw recognition photos unless true
+
+    # Reminder & Escalation settings
+    ESCALATE_AFTER_MIN: int = 10
+    QUIET_HOURS_START: int = 22  # 10:00 PM
+    QUIET_HOURS_END: int = 6    # 06:00 AM
+
     # Data directories
     DATA_DIR: str = "./data"
     UPLOAD_DIR: str = "./data/uploads"

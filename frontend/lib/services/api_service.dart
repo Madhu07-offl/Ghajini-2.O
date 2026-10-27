@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:ghajini_app/core/api_client.dart';
+import 'package:ghajini_app/models/alert_model.dart';
 import 'package:ghajini_app/models/memory.dart';
 import 'package:ghajini_app/models/person.dart';
 import 'package:ghajini_app/models/recognition_result.dart';
@@ -18,6 +19,15 @@ class ApiService {
     } catch (_) {
       return false;
     }
+  }
+
+  /// Transcribe voice audio (16kHz mono wav/m4a, max 15s)
+  Future<Map<String, dynamic>> transcribeVoice(String filePath) async {
+    final formData = FormData.fromMap({
+      'file': await MultipartFile.fromFile(filePath, filename: 'voice_input.wav'),
+    });
+    final res = await _dio.post('/voice/transcribe', data: formData);
+    return res.data as Map<String, dynamic>;
   }
 
   /// Get registered people
@@ -119,6 +129,75 @@ class ApiService {
     return list.map((e) => Reminder.fromJson(e as Map<String, dynamic>)).toList();
   }
 
+  /// Get currently due/triggered reminders (polled every 15s)
+  Future<List<Reminder>> getDueReminders({int patientId = 1}) async {
+    final res = await _dio.get(
+      '/reminders/due',
+      queryParameters: {'patient_id': patientId},
+    );
+    final list = res.data as List<dynamic>;
+    return list.map((e) => Reminder.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  /// Create reminder
+  Future<Reminder> createReminder({
+    required String title,
+    String? message,
+    required String scheduledTime,
+    String frequency = 'daily',
+    String? rrule,
+    bool isCritical = false,
+    int escalateAfterMin = 10,
+    int patientId = 1,
+  }) async {
+    final res = await _dio.post(
+      '/reminders',
+      data: {
+        'title': title,
+        'message': message,
+        'scheduled_time': scheduledTime,
+        'frequency': frequency,
+        'rrule': rrule,
+        'is_critical': isCritical,
+        'escalate_after_min': escalateAfterMin,
+        'patient_id': patientId,
+      },
+    );
+    return Reminder.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  /// Update reminder
+  Future<Reminder> updateReminder(
+    int reminderId, {
+    String? title,
+    String? message,
+    String? scheduledTime,
+    String? frequency,
+    String? rrule,
+    bool? isCritical,
+    int? escalateAfterMin,
+  }) async {
+    final res = await _dio.put(
+      '/reminders/$reminderId',
+      data: {
+        if (title != null) 'title': title,
+        if (message != null) 'message': message,
+        if (scheduledTime != null) 'scheduled_time': scheduledTime,
+        if (frequency != null) 'frequency': frequency,
+        if (rrule != null) 'rrule': rrule,
+        if (isCritical != null) 'is_critical': isCritical,
+        if (escalateAfterMin != null) 'escalate_after_min': escalateAfterMin,
+      },
+    );
+    return Reminder.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  /// Delete reminder
+  Future<bool> deleteReminder(int reminderId) async {
+    final res = await _dio.delete('/reminders/$reminderId');
+    return res.statusCode == 200;
+  }
+
   /// Respond to reminder: "acknowledged" | "snoozed" | "distressed"
   Future<Reminder> respondToReminder({
     required int reminderId,
@@ -129,5 +208,27 @@ class ApiService {
       data: {'response': response},
     );
     return Reminder.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  /// Trigger emergency SOS alert
+  Future<Map<String, dynamic>> triggerSOSHelp({int patientId = 1, String? note}) async {
+    final res = await _dio.post(
+      '/alerts/help',
+      data: {
+        'patient_id': patientId,
+        'note': note ?? 'SOS button tapped by patient.',
+      },
+    );
+    return res.data as Map<String, dynamic>;
+  }
+
+  /// Get recent alerts for caregiver
+  Future<List<AlertModel>> getRecentAlerts({int patientId = 1}) async {
+    final res = await _dio.get(
+      '/alerts',
+      queryParameters: {'patient_id': patientId},
+    );
+    final list = res.data as List<dynamic>;
+    return list.map((e) => AlertModel.fromJson(e as Map<String, dynamic>)).toList();
   }
 }

@@ -1,17 +1,19 @@
 # Ghajini 2.0 - AI Memory Companion for Alzheimer's Patients
 
-A full-stack, local-first AI memory companion designed specifically for Alzheimer's patients and their caregivers. It features high-accuracy face recognition, grounded semantic memory retrieval, Ollama LLM integration, automated medication reminders with escalation policies, and a high-contrast elderly-friendly UI.
+A full-stack, local-first AI memory companion designed specifically for Alzheimer's patients and their caregivers. It features high-accuracy face recognition, grounded semantic memory retrieval, Ollama LLM integration, offline voice transcription with faster-whisper, automated medication reminders with iCal RRULE escalation, emergency phrase interception, caregiver alerts, and a high-contrast elderly-friendly UI.
 
 ---
 
 ## Architecture Overview
 
 - **Backend**: FastAPI (Python 3.11), SQLAlchemy 2.x, SQLite, Pydantic v2
+- **Voice Transcription**: `faster-whisper` (model `small`, int8, CPU) with VAD filtering and language detection (`en`, `hi`, `pa`)
 - **Face Engine**: InsightFace (`buffalo_l`) + FAISS (`IndexFlatIP` on 512-d L2 normalized embeddings)
 - **Memory Retrieval**: SentenceTransformers (`paraphrase-multilingual-MiniLM-L12-v2`) + FAISS (`IndexFlatIP` on 384-d L2 normalized vectors)
-- **Chat / LLM**: Local Ollama (`llama3.2:3b`) with strict grounding prompts and graceful template fallback
-- **Reminders**: APScheduler with a 5-minute unacknowledged repetition and caregiver alert escalation
-- **Frontend**: Flutter (Android + Web), Riverpod, GoRouter, TTS, Camera, High-contrast elderly-friendly UI (20sp+ typography, 64dp+ touch targets)
+- **Chat / LLM**: Local Ollama (`llama3.2:3b`) with strict grounding prompts, multilingual fallback ("I am not sure" in English, Hindi, Punjabi), and emergency phrase interception
+- **Reminders & Escalation**: APScheduler + `python-dateutil` RRULE recurrence. 15-second frontend polling, 5-minute unacknowledged repeat, quiet hours suppression (22:00-06:00), and caregiver alert escalation via Twilio SMS stub
+- **Privacy & Audit**: Strict face consent validation, complete data wipe, audit log (`audit_logs`), and GDPR/HIPAA compliant JSON export archive (ZIP)
+- **Frontend**: Flutter (Android + Web), Riverpod, GoRouter, Push-to-Talk audio recording (`record`), TTS (`flutter_tts` at rate 0.8), local notifications (`flutter_local_notifications`), emergency phone dialer (`url_launcher`), and high-contrast elderly-friendly UI (20sp+ typography, 64dp+ touch targets)
 
 ---
 
@@ -22,31 +24,64 @@ ghajini_2.0/
   backend/
     app/
       main.py
-      core/config.py
-      db/session.py, models.py
+      core/config.py            (Settings from .env using pydantic-settings)
+      db/session.py, models.py  (SQLAlchemy 2.x, SQLite auto-migration)
       modules/
-        people/router.py
-        faces/engine.py
-        memory/router.py, retrieval.py
-        chat/router.py, prompts.py, llm_client.py
-        reminders/router.py, scheduler.py
-        privacy/router.py
+        people/router.py        (Registration, consent, face vectors, recognition)
+        faces/engine.py         (InsightFace buffalo_l + FAISS IndexFlatIP)
+        memory/router.py, retrieval.py (SentenceTransformers + FAISS)
+        chat/router.py, prompts.py, llm_client.py (Emergency interception, Ollama)
+        voice/router.py, transcriber.py (faster-whisper small int8 CPU + VAD)
+        alerts/router.py, service.py    (Caregiver alert dispatcher + Twilio SMS)
+        reminders/router.py, scheduler.py (APScheduler + RRULE + escalation)
+        privacy/router.py       (ZIP export, complete data wipe, audit log)
     scripts/seed_demo_data.py
-    tests/test_api.py
+    tests/test_api.py           (10 pytest tests covering all critical paths)
     requirements.txt, .env.example, Dockerfile
   frontend/
     lib/
       main.dart
       core/constants.dart, theme.dart, api_client.dart
-      models/person.dart, recognition_result.dart, memory.dart, reminder.dart
+      models/person.dart, recognition_result.dart, memory.dart, reminder.dart, alert_model.dart
       services/api_service.dart, tts_service.dart
       providers/app_providers.dart
       router/app_router.dart
-      screens/home_screen.dart, recognize_screen.dart, ask_screen.dart, add_person_screen.dart
+      screens/
+        home_screen.dart        (Greeting, due reminder card, SOS, Call Family)
+        recognize_screen.dart   (Camera capture / photo pick, voice output)
+        ask_screen.dart         (Push-to-talk mic, confirmation, replay, lang switch)
+        add_person_screen.dart  (Caregiver: name, relationship, notes, consent, photos)
+        caregiver_screen.dart   (Caregiver portal: reminders manager, alert feed)
     pubspec.yaml
   docker-compose.yml
   README.md
 ```
+
+---
+
+## Environment Variables (.env)
+
+| Variable | Default | Description |
+|---|---|---|
+| `PROJECT_NAME` | `Ghajini 2.0` | Application name |
+| `API_V1_STR` | `/v1` | Base API prefix |
+| `DATABASE_URL` | `sqlite:///./ghajini.db` | SQLite database file location |
+| `DEFAULT_PATIENT_ID` | `1` | Default active patient ID |
+| `WHISPER_MODEL` | `small` | Faster-whisper model variant (`small`, `tiny`, `base`) |
+| `FEATURE_PUSH` | `true` | Enables push notification logging stub |
+| `FEATURE_SMS` | `false` | Enables Twilio SMS caregiver alerts |
+| `STORE_PHOTOS` | `false` | When `false`, raw recognition photos are discarded |
+| `ESCALATE_AFTER_MIN` | `10` | Minutes before unacknowledged reminder escalates |
+| `QUIET_HOURS_START` | `22` | Quiet hours start hour (22 = 10 PM) |
+| `QUIET_HOURS_END` | `6` | Quiet hours end hour (6 = 6 AM) |
+| `FACE_T_HIGH` | `0.50` | Face recognition high confidence threshold |
+| `FACE_T_LOW` | `0.38` | Face recognition low confidence threshold |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama service endpoint |
+| `OLLAMA_MODEL` | `llama3.2:3b` | Default Ollama model name |
+| `TWILIO_ACCOUNT_SID` | `""` | Twilio account SID for SMS alerts |
+| `TWILIO_AUTH_TOKEN` | `""` | Twilio auth token |
+| `TWILIO_FROM_NUMBER` | `""` | Twilio sender phone number |
+| `CAREGIVER_ALERT_PHONE`| `+919876543210` | Caregiver emergency phone number |
 
 ---
 
@@ -109,27 +144,35 @@ cp .env.example .env
 Seeds 3 people (Priya - daughter, Dr. Sharma - doctor, Arun - son), 10 memories, and one daily 9:00 AM blood pressure reminder:
 
 ```bash
-# From the backend directory (or workspace root)
-python scripts/seed_demo_data.py
+# From workspace root or backend folder
+python backend/scripts/seed_demo_data.py
 ```
 
 ### Step D: Run Pytest Tests
 
-Runs the 5 verification tests (health, create person, ask known fact, ask unknown fact with fallback, delete person):
+Runs the full 10-test test suite:
 
 ```bash
-# Run tests
-pytest tests/ -v
+python -m pytest backend/tests -v
 ```
+
+All 10 tests verify:
+1. Health check & engine status
+2. Create person with consent validation
+3. Ask with known fact from memory
+4. Ask with unknown fact (verifies exact translated fallback)
+5. Delete person
+6. Voice transcription of 16kHz mono WAV audio
+7. Emergency phrase interception (skips LLM, generates caregiver alert)
+8. Reminder scheduling, 15s `/due` polling, repetition at 5m, and escalation
+9. Complete face vector purging on person deletion
+10. GDPR/HIPAA privacy export returning a valid JSON ZIP archive
 
 ### Step E: Run the Backend Server
 
 ```bash
-# Start FastAPI backend with Uvicorn
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
-
-Health check is accessible at `http://localhost:8000/health` and `http://localhost:8000/v1/health`.
 
 ---
 
@@ -138,7 +181,7 @@ Health check is accessible at `http://localhost:8000/health` and `http://localho
 ```bash
 cd frontend
 
-# Install Flutter dependencies
+# Install Flutter packages
 flutter pub get
 
 # Run on Web (Chrome)
@@ -157,23 +200,74 @@ All endpoints are prefixed with `/v1` and return JSON:
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/health` | Health check & engine status |
-| `POST` | `/people` | Register person (requires consent=true) |
+| `POST` | `/people` | Register person (`consent=true` required) |
 | `GET` | `/people` | List registered people & face count |
-| `POST` | `/people/{id}/faces` | Upload multipart face photo |
+| `POST` | `/people/{id}/faces` | Upload multipart face photo (rejects without consent) |
 | `DELETE` | `/people/{id}` | Delete person, files, and FAISS vectors |
 | `POST` | `/recognize` | Multipart image -> status (`match`, `uncertain`, `unknown`, `no_face`) |
 | `POST` | `/memories` | Create memory note (auto-embedded into FAISS) |
 | `GET` | `/memories` | List patient memories |
-| `POST` | `/ask` | Semantic retrieval + Ollama response (`answer`, `grounded`, `sources`) |
-| `POST` | `/reminders` | Create scheduled reminder |
+| `POST` | `/ask` | Semantic retrieval + LLM answer / Emergency interception |
+| `POST` | `/voice/transcribe` | Multipart WAV/M4A audio transcription (faster-whisper small int8) |
+| `POST` | `/alerts/help` | SOS emergency trigger |
+| `GET` | `/alerts` | Caregiver alerts history feed |
+| `POST` | `/reminders` | Create reminder with optional iCal RRULE |
 | `GET` | `/reminders/upcoming` | List upcoming reminders |
+| `GET` | `/reminders/due` | Poll currently due/triggered reminders (polled every 15s) |
+| `PUT` | `/reminders/{id}` | Edit an existing reminder |
+| `DELETE` | `/reminders/{id}` | Delete a reminder |
 | `POST` | `/reminders/{id}/respond` | Respond (`acknowledged`, `snoozed`, `distressed`) |
-| `DELETE` | `/privacy/all` | Wipe all personal data, memories, images, and FAISS indices |
+| `GET` | `/privacy/export` | Download full personal data as a ZIP archive containing `export.json` |
+| `DELETE` | `/privacy/all` | Wipe all patient records, faces, vectors, and audit logs |
 
 ---
 
-## 5. Security & Privacy
+## 5. How to Test Voice and Reminders
 
-- Every data table includes `patient_id` for multi-tenant / JWT extensibility.
-- Strict consent requirement on person registration.
-- Complete right-to-be-forgotten endpoint (`DELETE /v1/privacy/all`) purges SQLite records, uploaded photo files, and in-memory FAISS vector indices.
+### Testing Voice Transcription
+1. **API Voice Transcribe**:
+   ```bash
+   curl -X POST "http://localhost:8000/v1/voice/transcribe" -F "file=@sample.wav"
+   ```
+   Returns `{ "text": "...", "language": "en", "confidence": 0.92, "needs_confirmation": false }`.
+2. **Emergency Voice / Text Interception**:
+   Send a query containing "help", "I fell", "bachao", or "madad":
+   ```bash
+   curl -X POST "http://localhost:8000/v1/ask" -H "Content-Type: application/json" -d "{\"text\": \"help me, I fell down!\", \"lang\": \"en\"}"
+   ```
+   Output skips the LLM immediately and replies:
+   `{"answer": "Help is coming. I am telling your family.", "grounded": true, "sources": []}`
+   and registers a new alert at `GET /v1/alerts`.
+3. **Flutter Push-to-Talk**:
+   - Open **Ask me anything** (`/ask`).
+   - Hold or tap the large microphone button to record 16kHz mono audio.
+   - If confidence is low, the prompt displays: `"Did you ask: ...?"` with `Yes` and `No` confirmation buttons.
+   - Text is spoken aloud using `flutter_tts` at rate 0.8 according to selected language (English: `en-IN`, Hindi: `hi-IN`, Punjabi: `pa-IN`).
+
+### Testing Reminders & Escalation
+1. **Caregiver Management**:
+   - Click the Admin / Caregiver icon in the top right AppBar of the Home screen (`/caregiver`).
+   - Create or edit reminders with custom time, repeat frequency (daily / weekly), and critical flag.
+2. **15-Second Polling & Due Card**:
+   - When a reminder's time arrives, `GET /v1/reminders/due` returns it to the Home screen.
+   - The Home screen automatically opens a full-screen alert dialog with large buttons: **Done**, **Later (Snooze 5 min)**, and **I need help**.
+   - Offline notifications are pre-scheduled with `flutter_local_notifications` for the upcoming 24 hours.
+3. **Escalation**:
+   - If a reminder is ignored, it repeats after 5 minutes.
+   - After `ESCALATE_AFTER_MIN` (default 10 min), its status becomes `escalated`, an alert is registered in `alerts`, and Twilio SMS is dispatched to the caregiver when `FEATURE_SMS=true`.
+
+---
+
+## 6. Status of Features & Limitations
+
+| Component | Status | Details |
+|---|---|---|
+| **FastAPI Backend** | Fully functional | All endpoints operational under `/v1` |
+| **Face Recognition** | Fully functional | InsightFace buffalo_l + FAISS IndexFlatIP |
+| **Memory Retrieval** | Fully functional | Multilingual SentenceTransformers + FAISS |
+| **Voice Transcription**| Fully functional | faster-whisper small int8 on CPU + VAD filter |
+| **Emergency Trigger** | Fully functional | Intercepts en/hi/pa keywords, notifies caregivers |
+| **Reminders & RRULE** | Fully functional | APScheduler + python-dateutil recurrence |
+| **Caregiver SMS** | Stubbed / Functional | Active when `FEATURE_SMS=true` with valid Twilio keys; logs warning stub otherwise |
+| **Push Notifications** | Stubbed | Active when `FEATURE_PUSH=true`; logs notification stub |
+| **TTS Punjabi Voice** | Device dependent | Mapped to `pa-IN`; falls back gracefully to display text if the Punjabi TTS engine is absent on the physical device |

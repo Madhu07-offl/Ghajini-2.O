@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.db.models import Consent, Person, PersonFace
+from app.db.models import AuditLog, Consent, Person, PersonFace
 from app.db.session import get_db
 from app.modules.faces.engine import face_engine
 
@@ -69,6 +69,14 @@ def create_person(payload: PersonCreate, db: Session = Depends(get_db)):
         consent_type="face_recognition_and_data_storage",
     )
     db.add(consent_record)
+
+    # Record audit log
+    audit_record = AuditLog(
+        patient_id=pid,
+        action="create_person",
+        details=f"Created person '{person.name}' ({person.relationship}), id={person.id}",
+    )
+    db.add(audit_record)
     db.commit()
 
     return PersonResponse(
@@ -118,6 +126,18 @@ async def upload_person_face(
     person = db.query(Person).filter(Person.id == person_id).first()
     if not person:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Person not found")
+
+    # Enrolling a face requires a consent record. Reject uploads without it.
+    consent = (
+        db.query(Consent)
+        .filter(Consent.person_id == person_id, Consent.consent_given == True)
+        .first()
+    )
+    if not consent:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Enrolling a face requires an explicit consent record.",
+        )
 
     content = await image.read()
     if not content:
@@ -178,6 +198,14 @@ def delete_person(person_id: int, db: Session = Depends(get_db)):
     # Remove vectors from FAISS
     face_engine.remove_person(person_id, face_ids)
 
+    # Record audit log
+    audit_record = AuditLog(
+        patient_id=person.patient_id,
+        action="delete_person",
+        details=f"Deleted person id={person_id}, name='{person.name}' and all associated faces",
+    )
+    db.add(audit_record)
+
     # Delete person from DB (cascades to faces and consents)
     db.delete(person)
     db.commit()
@@ -194,7 +222,27 @@ async def recognize_face(
     if not content:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty image uploaded")
 
+    # Do not store raw recognition photos unless STORE_PHOTOS=true
+    if settings.STORE_PHOTOS:
+        try:
+            os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+            filename = f"rec_{int(time.time())}_{image.filename or 'rec.jpg'}"
+            rec_path = os.path.join(settings.UPLOAD_DIR, filename)
+            with open(rec_path, "wb") as f:
+                f.write(content)
+        except Exception:
+            pass
+
     result = face_engine.recognize(content)
+
+    # Audit log recognition: score and status only, never the image
+    audit = AuditLog(
+        patient_id=settings.DEFAULT_PATIENT_ID,
+        action="recognition",
+        details=f"status={result['status']}, similarity={result['similarity']}, person_id={result['person_id']}",
+    )
+    db.add(audit)
+    db.commit()
     person_obj = None
 
     if result["person_id"]:

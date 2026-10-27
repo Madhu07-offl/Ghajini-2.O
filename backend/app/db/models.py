@@ -16,6 +16,8 @@ class Patient(Base):
     memories = orm_relationship("Memory", back_populates="patient", cascade="all, delete-orphan")
     reminders = orm_relationship("Reminder", back_populates="patient", cascade="all, delete-orphan")
     consents = orm_relationship("Consent", back_populates="patient", cascade="all, delete-orphan")
+    alerts = orm_relationship("Alert", back_populates="patient", cascade="all, delete-orphan")
+    audit_logs = orm_relationship("AuditLog", back_populates="patient", cascade="all, delete-orphan")
 
 
 class Person(Base):
@@ -65,11 +67,16 @@ class Reminder(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     patient_id = Column(Integer, ForeignKey("patients.id", ondelete="CASCADE"), nullable=False, default=1, index=True)
     title = Column(String(200), nullable=False)
+    message = Column(Text, nullable=True)
     scheduled_time = Column(String(20), nullable=False)  # e.g., "09:00"
     frequency = Column(String(50), default="daily", nullable=False)
-    status = Column(String(50), default="pending", nullable=False)  # pending, acknowledged, snoozed, distressed, escalated
+    rrule = Column(String(200), nullable=True)  # iCal RRULE e.g. "FREQ=DAILY" or "FREQ=WEEKLY;BYDAY=MO,WE,FR"
+    is_critical = Column(Boolean, default=False, nullable=False)
+    escalate_after_min = Column(Integer, default=10, nullable=False)
+    status = Column(String(50), default="pending", nullable=False)  # pending, triggered, acknowledged, snoozed, distressed, escalated
     retry_count = Column(Integer, default=0, nullable=False)
     last_triggered_at = Column(DateTime, nullable=True)
+    next_run_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     patient = orm_relationship("Patient", back_populates="reminders")
@@ -83,6 +90,7 @@ class ReminderLog(Base):
     patient_id = Column(Integer, ForeignKey("patients.id", ondelete="CASCADE"), nullable=False, default=1, index=True)
     reminder_id = Column(Integer, ForeignKey("reminders.id", ondelete="CASCADE"), nullable=False, index=True)
     action = Column(String(50), nullable=False)  # triggered, repeated, acknowledged, snoozed, distressed, escalated
+    outcome = Column(String(50), default="ignored", nullable=False)  # ignored, repeated, acknowledged, snoozed, distressed, escalated
     details = Column(Text, nullable=True)
     timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
 
@@ -100,3 +108,29 @@ class Consent(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     patient = orm_relationship("Patient", back_populates="consents")
+
+
+class Alert(Base):
+    __tablename__ = "alerts"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    patient_id = Column(Integer, ForeignKey("patients.id", ondelete="CASCADE"), nullable=False, default=1, index=True)
+    reminder_id = Column(Integer, ForeignKey("reminders.id", ondelete="SET NULL"), nullable=True, index=True)
+    alert_type = Column(String(50), nullable=False)  # "sos_button", "emergency_phrase", "reminder_escalated", "distress_response"
+    message = Column(Text, nullable=False)
+    status = Column(String(50), default="sent", nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    patient = orm_relationship("Patient", back_populates="alerts")
+
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    patient_id = Column(Integer, ForeignKey("patients.id", ondelete="CASCADE"), nullable=False, default=1, index=True)
+    action = Column(String(50), nullable=False)  # "create_person", "delete_person", "export_data", "wipe_all_data", "alert_created", "recognition"
+    details = Column(Text, nullable=True)
+    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    patient = orm_relationship("Patient", back_populates="audit_logs")

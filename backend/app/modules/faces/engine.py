@@ -117,6 +117,8 @@ class FaceEngine:
             self._fallback_vectors[face_id] = norm_emb
         self.face_id_to_person_id[face_id] = person_id
 
+    add_face_embedding = add_face
+
     def remove_person(self, person_id: int, face_ids: List[int]) -> None:
         for face_id in face_ids:
             if self.index is not None:
