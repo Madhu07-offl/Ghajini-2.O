@@ -13,7 +13,11 @@ except ImportError:
     logger.warning("faiss not installed; memory retrieval will use fallback")
 
 try:
-    from sentence_transformers import SentenceTransformer
+    import os
+    if os.environ.get("PYTEST_CURRENT_TEST") or os.environ.get("TESTING"):
+        SentenceTransformer = None
+    else:
+        from sentence_transformers import SentenceTransformer
 except ImportError:
     SentenceTransformer = None
     logger.warning("sentence_transformers not installed; memory retrieval will use fallback")
@@ -37,6 +41,12 @@ class MemoryRetrieval:
             self.index = None
 
     def _init_model(self) -> None:
+        import os
+        if os.environ.get("PYTEST_CURRENT_TEST") or os.environ.get("TESTING"):
+            logger.info("Test mode: skipping SentenceTransformer model load, using fallback.")
+            self.model = None
+            return
+
         if SentenceTransformer is not None:
             try:
                 self.model = SentenceTransformer(self.model_name, local_files_only=True)

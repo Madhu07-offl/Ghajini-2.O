@@ -230,6 +230,49 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
       white-space: nowrap;
       flex-shrink: 0;
     }
+    .lang-selector-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 9px;
+      border-radius: 8px;
+      border: 1px solid var(--primary-border);
+      background: var(--primary-light);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--primary);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .top-lang-dropdown {
+      border: none;
+      background: transparent;
+      font-size: 12px;
+      font-weight: 600;
+      color: #065F46;
+      outline: none;
+      cursor: pointer;
+    }
+    .mobile-lang-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 0 8px;
+      border-radius: 8px;
+      border: 1px solid var(--primary-border);
+      background: var(--primary-light);
+      height: 34px;
+      flex-shrink: 0;
+    }
+    .mobile-lang-dropdown {
+      border: none;
+      background: transparent;
+      font-size: 12px;
+      font-weight: 700;
+      color: #065F46;
+      outline: none;
+      cursor: pointer;
+    }
     .header-pill-red {
       color: #DC2626;
       border-color: #FECACA;
@@ -1250,6 +1293,17 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
           </button>
           <input type="text" class="agent-name-input" value="Ghajini 2.0 (Alzheimer's Companion)">
+          
+          <!-- Top Global Language Switcher (English / Hindi / Punjabi) -->
+          <div class="lang-selector-pill" title="Choose Voice & Companion Language">
+            <span style="font-size: 13px;">🌐</span>
+            <select id="top-lang-select" class="top-lang-dropdown" onchange="setGlobalLanguage(this.value)">
+              <option value="en" selected>English</option>
+              <option value="hi">हिन्दी (Hindi)</option>
+              <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
+            </select>
+          </div>
+
           <div class="header-pill header-pill-red" title="SIM Direct Calling Enabled">
             <span style="font-size: 10px;">●</span> Outgoing (SIM)
           </div>
@@ -1304,6 +1358,15 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
             </div>
           </div>
           <div class="mobile-header-actions">
+            <!-- Mobile Language Switcher (EN / HI / PA) -->
+            <div class="mobile-lang-pill" title="Choose Language">
+              <span style="font-size: 11px;">🌐</span>
+              <select id="top-lang-select-mobile" class="mobile-lang-dropdown" onchange="setGlobalLanguage(this.value)">
+                <option value="en" selected>English</option>
+                <option value="hi">हिन्दी</option>
+                <option value="pa">ਪੰਜਾਬੀ</option>
+              </select>
+            </div>
             <button class="btn-patient-switch-mobile" onclick="switchPortal('patient')" title="Switch to Simple Patient View">
               <span>👴</span> Patient
             </button>
@@ -1401,11 +1464,11 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
             <!-- Voice Setting Tile -->
             <div class="setting-tile">
               <div class="setting-tile-info">
-                <div class="setting-tile-title">
+                <div class="setting-tile-title" id="voice-tile-title">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M8 12a4 4 0 0 1 8 0"/></svg>
                   Aditi (Elder-care Gentle & Slow - 0.85x)
                 </div>
-                <div class="setting-tile-desc">Indian Accent &bull; Calming warm cadence &bull; Noise Suppression Active</div>
+                <div class="setting-tile-desc" id="voice-tile-desc">Indian Accent &bull; Calming warm cadence &bull; Noise Suppression Active</div>
               </div>
               <button class="btn-outline" style="height: 32px; font-size: 12px; background: white;" onclick="testVoicePlayback()">
                 ▶ Preview Voice
@@ -1417,9 +1480,9 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
                 <span>Primary Language</span>
                 <span class="form-label-counter">Fallback: English</span>
               </div>
-              <select id="agent-lang" class="form-control" onchange="onLangChange()">
-                <option value="en">English (India) - en-IN</option>
-                <option value="hi" selected>Hindi - hi-IN (हिन्दी)</option>
+              <select id="agent-lang" class="form-control" onchange="setGlobalLanguage(this.value)">
+                <option value="en" selected>English (India) - en-IN</option>
+                <option value="hi">Hindi - hi-IN (हिन्दी)</option>
                 <option value="pa">Punjabi - pa-IN (ਪੰਜਾਬੀ)</option>
               </select>
             </div>
@@ -1429,7 +1492,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
                 <span>First Sentence (Greeting Message)</span>
                 <span class="form-label-counter" id="greeting-counter">64/120</span>
               </div>
-              <input type="text" id="agent-first-sentence" class="form-control" value="Namaste! I am Ghajini, your friend. How are you feeling right now?">
+              <input type="text" id="agent-first-sentence" class="form-control" value="Hello! I am Ghajini, your companion. How are you feeling today?">
             </div>
           </div>
 
@@ -1503,8 +1566,8 @@ Rules:
             </div>
 
             <div class="simulator-body" id="chat-stream">
-              <div class="chat-bubble chat-bubble-ghajini">
-                Namaste! I am Ghajini, your friend. You are safe at home. How can I help you today?
+              <div class="chat-bubble chat-bubble-ghajini" id="simulator-initial-bubble">
+                Hello! I am Ghajini, your friend. You are safe at home. How can I help you today?
                 <div>
                   <span class="meta-tag meta-intent">intent: greeting</span>
                   <span class="meta-tag meta-grounded">verified safe</span>
@@ -1513,11 +1576,11 @@ Rules:
             </div>
 
             <div class="simulator-footer">
-              <div class="quick-prompts">
+              <div class="quick-prompts" id="simulator-quick-prompts">
                 <button class="quick-chip" onclick="quickSend('Who is Priya?')">Who is Priya?</button>
                 <button class="quick-chip" onclick="quickSend('What day is it today?')">What day is it?</button>
                 <button class="quick-chip" onclick="quickSend('Did I take my medicine?')">Did I take my medicine?</button>
-                <button class="quick-chip" onclick="quickSend('Madad karo main gir gayi')">🚨 Help (Hindi)</button>
+                <button class="quick-chip" onclick="quickSend('Help me, I fell down')">🚨 Help me</button>
               </div>
               <div class="sim-input-row">
                 <input type="text" id="sim-input" class="form-control" placeholder="Ask or speak to Ghajini..." onkeydown="if(event.key==='Enter') sendSimulatorText()">
@@ -1859,10 +1922,10 @@ Rules:
       <div class="patient-hero-card">
         <img src="data:image/png;base64,__LOGO_B64__" onerror="this.src='/logo.png'" alt="Ghajini Robot Friend" class="patient-hero-logo">
         <div style="font-size: 26px; font-weight: 800; color: #1F2937; margin-top: 14px;" id="p-greeting-text">
-          नमस्ते! मैं गजिनी हूँ।
+          Hello! I am Ghajini.
         </div>
         <div style="font-size: 16px; color: var(--text-muted); margin-top: 6px;" id="p-subgreeting-text">
-          आप अपने घर में बिल्कुल सुरक्षित हैं। मैं आपके साथ हूँ।
+          You are safe at home with your loved ones. I am right here with you.
         </div>
         <button class="btn-outline" style="margin-top: 16px; font-size: 13px;" onclick="switchPortal('studio')">
           ← Back to Caregiver Studio
@@ -1873,29 +1936,29 @@ Rules:
         <!-- 1. Talk to Ghajini -->
         <div class="patient-big-btn p-btn-talk" onclick="patientOpenTalk()">
           <div style="font-size: 40px;">🤖</div>
-          <div style="font-size: 19px; font-weight: 800; color: #1F2937;">गजिनी से बात करें</div>
-          <div style="font-size: 13.5px; color: var(--text-muted);">मुझसे कोई भी सवाल पूछें</div>
+          <div style="font-size: 19px; font-weight: 800; color: #1F2937;" id="p-talk-title">Talk to Ghajini</div>
+          <div style="font-size: 13.5px; color: var(--text-muted);" id="p-talk-sub">Ask me any question</div>
         </div>
 
         <!-- 2. Call Priya -->
         <div class="patient-big-btn p-btn-call" onclick="openPhoneCallModal()">
           <div style="font-size: 40px;">📞</div>
-          <div style="font-size: 19px; font-weight: 800; color: #065F46;">प्रिया को फोन करें</div>
-          <div style="font-size: 13.5px; color: #047857;">+91 7604934874 (तुरंत कॉल)</div>
+          <div style="font-size: 19px; font-weight: 800; color: #065F46;" id="p-call-title">Call Priya</div>
+          <div style="font-size: 13.5px; color: #047857;" id="p-call-sub">+91 7604934874 (Direct Call)</div>
         </div>
 
         <!-- 3. Heart & Pulse -->
         <div class="patient-big-btn p-btn-heart" onclick="patientOpenHeart()">
           <div style="font-size: 40px;">❤️</div>
-          <div style="font-size: 19px; font-weight: 800; color: #9F1239;">मेरा दिल और नब्ज़</div>
-          <div style="font-size: 13.5px; color: #BE123C;" id="p-heart-status-sub">74 BPM &bull; बिल्कुल सामान्य</div>
+          <div style="font-size: 19px; font-weight: 800; color: #9F1239;" id="p-heart-title">Heart & Vitals</div>
+          <div style="font-size: 13.5px; color: #BE123C;" id="p-heart-status-sub">74 BPM &bull; Steady & Normal</div>
         </div>
 
         <!-- 4. SOS Help -->
         <div class="patient-big-btn p-btn-sos" onclick="patientTriggerSOS()">
           <div style="font-size: 40px;">🚨</div>
-          <div style="font-size: 19px; font-weight: 800; color: #991B1B;">मदद चाहिए / SOS</div>
-          <div style="font-size: 13.5px; color: #B91C1C;">परिवार को तुरंत संदेश भेजें</div>
+          <div style="font-size: 19px; font-weight: 800; color: #991B1B;" id="p-sos-title">Need Help / SOS</div>
+          <div style="font-size: 13.5px; color: #B91C1C;" id="p-sos-sub">Alert family immediately</div>
         </div>
       </div>
     </section>
@@ -1926,7 +1989,7 @@ Rules:
       </div>
 
       <div style="background: #F9FAFB; border: 1px solid var(--card-border); border-radius: 10px; padding: 12px; font-size: 13.5px; line-height: 1.5; color: var(--text-title); min-height: 55px;" id="call-voice-transcript">
-        "Namaste! I am Ghajini. How are you feeling today?"
+        "Hello! I am Ghajini. How are you feeling today?"
       </div>
 
       <div style="display: flex; justify-content: center; gap: 12px; margin-top: 20px;">
@@ -2123,24 +2186,156 @@ Rules:
       }
     }
 
-    // Language Change
-    function onLangChange() {
-      const lang = document.getElementById('agent-lang').value;
+    // Multilingual Dictionary & Global Switcher
+    const LANG_DATA = {
+      en: {
+        code: 'en',
+        name: 'English',
+        voiceTileTitle: 'Aditi (Elder-care Gentle & Slow - 0.85x)',
+        voiceTileDesc: 'Indian Accent • Calming warm cadence • Noise Suppression Active',
+        firstSentence: 'Hello! I am Ghajini, your companion. How are you feeling today?',
+        pGreeting: 'Hello! I am Ghajini.',
+        pSub: 'You are safe at home with your loved ones. I am right here with you.',
+        pTalkTitle: 'Talk to Ghajini',
+        pTalkSub: 'Ask me any question',
+        pCallTitle: 'Call Priya',
+        pCallSub: '+91 7604934874 (Direct Call)',
+        pHeartTitle: 'Heart & Vitals',
+        pHeartSub: '74 BPM • Steady & Normal',
+        pSOSTitle: 'Need Help / SOS',
+        pSOSSub: 'Alert family immediately',
+        simGreeting: 'Hello! I am Ghajini, your friend. You are safe at home. How can I help you today?',
+        greetingVoice: 'Hello. I am Ghajini, your memory companion. You are safe at home and doing wonderful today.',
+        quickChips: [
+          { text: 'Who is Priya?', prompt: 'Who is Priya?' },
+          { text: 'What day is it?', prompt: 'What day is it today?' },
+          { text: 'Did I take my medicine?', prompt: 'Did I take my medicine?' },
+          { text: '🚨 Help, I fell down', prompt: 'Help me, I fell down' }
+        ]
+      },
+      hi: {
+        code: 'hi',
+        name: 'हिन्दी (Hindi)',
+        voiceTileTitle: 'Aditi (वृद्ध देखभाल - शांत और मंद 0.85x)',
+        voiceTileDesc: 'भारतीय लहजा • शांत और गर्म आवाज • शोर निवारण सक्रिय',
+        firstSentence: 'नमस्ते! मैं गजिनी हूँ, आपका साथी। आज आप कैसा महसूस कर रहे हैं?',
+        pGreeting: 'नमस्ते! मैं गजिनी हूँ।',
+        pSub: 'आप अपने घर में बिल्कुल सुरक्षित हैं। मैं आपके साथ हूँ।',
+        pTalkTitle: 'गजिनी से बात करें',
+        pTalkSub: 'मुझसे कोई भी सवाल पूछें',
+        pCallTitle: 'प्रिया को फोन करें',
+        pCallSub: '+91 7604934874 (तुरंत कॉल)',
+        pHeartTitle: 'मेरा दिल और नब्ज़',
+        pHeartSub: '74 BPM • बिल्कुल सामान्य',
+        pSOSTitle: 'मदद चाहिए / SOS',
+        pSOSSub: 'परिवार को तुरंत संदेश भेजें',
+        simGreeting: 'नमस्ते! मैं गजिनी हूँ, आपका मित्र। आप अपने घर में सुरक्षित हैं। आज मैं आपकी क्या मदद करूँ?',
+        greetingVoice: 'नमस्ते। मैं गजिनी हूँ, आपकी देखभाल साथी। आप अपने घर में सुरक्षित हैं।',
+        quickChips: [
+          { text: 'प्रिया कौन है?', prompt: 'प्रिया कौन है?' },
+          { text: 'आज कौन सा दिन है?', prompt: 'आज कौन सा दिन है?' },
+          { text: 'क्या मैंने दवाई ली?', prompt: 'क्या मैंने दवाई ले ली?' },
+          { text: '🚨 मदद करो मैं गिर गई', prompt: 'मदद करो मैं गिर गई' }
+        ]
+      },
+      pa: {
+        code: 'pa',
+        name: 'ਪੰਜਾਬੀ (Punjabi)',
+        voiceTileTitle: 'Aditi (ਬਜ਼ੁਰਗ ਦੇਖਭਾਲ - ਸ਼ਾਂਤ ਅਤੇ ਹੌਲੀ 0.85x)',
+        voiceTileDesc: 'ਭਾਰਤੀ ਲਹਿਜ਼ਾ • ਸ਼ਾਂਤ ਅਤੇ ਨਿੱਘੀ ਅਵਾਜ਼ • ਸ਼ੋਰ ਰੋਕੂ ਕਿਰਿਆਸ਼ੀਲ',
+        firstSentence: 'ਸਤਿ ਸ੍ਰੀ ਅਕਾਲ! ਮੈਂ ਗਜਨੀ ਹਾਂ, ਤੁਹਾਡਾ ਸਾਥੀ। ਅੱਜ ਤੁਸੀਂ ਕਿਵੇਂ ਮਹਿਸੂਸ ਕਰ ਰਹੇ ਹੋ?',
+        pGreeting: 'ਸਤਿ ਸ੍ਰੀ ਅਕਾਲ! ਮੈਂ ਗਜਨੀ ਹਾਂ।',
+        pSub: 'ਤੁਸੀਂ ਆਪਣੇ ਘਰ ਵਿੱਚ ਬਿਲਕੁਲ ਸੁਰੱਖਿਅਤ ਹੋ। ਮੈਂ ਤੁਹਾਡੇ ਨਾਲ ਹਾਂ।',
+        pTalkTitle: 'ਗਜਨੀ ਨਾਲ ਗੱਲ ਕਰੋ',
+        pTalkSub: 'ਮੈਨੂੰ ਕੋਈ ਵੀ ਸਵਾਲ ਪੁੱਛੋ',
+        pCallTitle: 'ਪ੍ਰਿਆ ਨੂੰ ਫ਼ੋਨ ਕਰੋ',
+        pCallSub: '+91 7604934874 (ਤੁਰੰਤ ਕਾਲ)',
+        pHeartTitle: 'ਮੇਰਾ ਦਿਲ ਅਤੇ ਨਬਜ਼',
+        pHeartSub: '74 BPM • ਬਿਲਕੁਲ ਆਮ',
+        pSOSTitle: 'ਮਦਦ ਚਾਹੀਦੀ ਹੈ / SOS',
+        pSOSSub: 'ਪਰਿਵਾਰ ਨੂੰ ਤੁਰੰਤ ਸੁਨੇਹਾ ਭੇਜੋ',
+        simGreeting: 'ਸਤਿ ਸ੍ਰੀ ਅਕਾਲ! ਮੈਂ ਗਜਨੀ ਹਾਂ, ਤੁਹਾਡਾ ਦੋਸਤ। ਤੁਸੀਂ ਆਪਣੇ ਘਰ ਵਿੱਚ ਸੁਰੱਖਿਅਤ ਹੋ। ਅੱਜ ਮੈਂ ਤੁਹਾਡੀ ਕੀ ਮਦਦ ਕਰਾਂ?',
+        greetingVoice: 'ਸਤਿ ਸ੍ਰੀ ਅਕਾਲ। ਮੈਂ ਗਜਨੀ ਹਾਂ, ਤੁਹਾਡੀ ਦੇਖਭਾਲ ਸਾਥੀ। ਤੁਸੀਂ ਆਪਣੇ ਘਰ ਵਿੱਚ ਬਿਲਕੁਲ ਸੁਰੱਖਿਅਤ ਹੋ।',
+        quickChips: [
+          { text: 'ਪ੍ਰਿਆ ਕੌਣ ਹੈ?', prompt: 'ਪ੍ਰਿਆ ਕੌਣ ਹੈ?' },
+          { text: 'ਅੱਜ ਕਿਹੜਾ ਦਿਨ ਹੈ?', prompt: 'ਅੱਜ ਕਿਹੜਾ ਦਿਨ ਹੈ?' },
+          { text: 'ਕੀ ਮੈਂ ਦਵਾਈ ਲੈ ਲਈ?', prompt: 'ਕੀ ਮੈਂ ਦਵਾਈ ਲੈ ਲਈ?' },
+          { text: '🚨 ਮਦਦ ਕਰੋ ਮੈਂ ਡਿੱਗ ਪਈ', prompt: 'ਮਦਦ ਕਰੋ ਮੈਂ ਡਿੱਗ ਪਈ' }
+        ]
+      }
+    };
+
+    function setGlobalLanguage(lang) {
+      if (!LANG_DATA[lang]) lang = 'en';
       currentLang = lang;
+      const data = LANG_DATA[lang];
+
+      // 1. Sync all select dropdowns
+      const topSelect = document.getElementById('top-lang-select');
+      const mobileSelect = document.getElementById('top-lang-select-mobile');
+      const studioSelect = document.getElementById('agent-lang');
+      if (topSelect) topSelect.value = lang;
+      if (mobileSelect) mobileSelect.value = lang;
+      if (studioSelect) studioSelect.value = lang;
+
+      // 2. Studio Card 1
+      const vTitle = document.getElementById('voice-tile-title');
+      const vDesc = document.getElementById('voice-tile-desc');
+      const firstSent = document.getElementById('agent-first-sentence');
+      const greetCounter = document.getElementById('greeting-counter');
+      if (vTitle) vTitle.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M8 12a4 4 0 0 1 8 0"/></svg> ${data.voiceTileTitle}`;
+      if (vDesc) vDesc.innerText = data.voiceTileDesc;
+      if (firstSent) {
+        firstSent.value = data.firstSentence;
+        if (greetCounter) greetCounter.innerText = `${data.firstSentence.length}/120`;
+      }
+
+      // 3. Voice call transcript
+      const callTranscript = document.getElementById('call-voice-transcript');
+      if (callTranscript) callTranscript.innerText = `"${data.firstSentence}"`;
+
+      // 4. Simulator Quick Prompts
+      const quickContainer = document.getElementById('simulator-quick-prompts');
+      if (quickContainer) {
+        quickContainer.innerHTML = '';
+        data.quickChips.forEach(chip => {
+          const btn = document.createElement('button');
+          btn.className = 'quick-chip';
+          btn.innerText = chip.text;
+          btn.onclick = () => quickSend(chip.prompt);
+          quickContainer.appendChild(btn);
+        });
+      }
+
+      // 5. Patient Portal Elements
       const pGreeting = document.getElementById('p-greeting-text');
       const pSub = document.getElementById('p-subgreeting-text');
+      const pTalkTitle = document.getElementById('p-talk-title');
+      const pTalkSub = document.getElementById('p-talk-sub');
+      const pCallTitle = document.getElementById('p-call-title');
+      const pCallSub = document.getElementById('p-call-sub');
+      const pHeartTitle = document.getElementById('p-heart-title');
+      const pHeartSub = document.getElementById('p-heart-status-sub');
+      const pSOSTitle = document.getElementById('p-sos-title');
+      const pSOSSub = document.getElementById('p-sos-sub');
 
-      if (lang === 'hi') {
-        pGreeting.innerText = 'नमस्ते! मैं गजिनी हूँ।';
-        pSub.innerText = 'आप अपने घर में बिल्कुल सुरक्षित हैं। मैं आपके साथ हूँ।';
-      } else if (lang === 'pa') {
-        pGreeting.innerText = 'ਸਤਿ ਸ੍ਰੀ ਅਕਾਲ! ਮੈਂ ਗਜਨੀ ਹਾਂ।';
-        pSub.innerText = 'ਤੁਸੀਂ ਆਪਣੇ ਘਰ ਵਿੱਚ ਬਿਲਕੁਲ ਸੁਰੱਖਿਅਤ ਹੋ। ਮੈਂ ਤੁਹਾਡੇ ਨਾਲ ਹਾਂ।';
-      } else {
-        pGreeting.innerText = 'Hello! I am Ghajini.';
-        pSub.innerText = 'You are safe at home with your loved ones. I am right here with you.';
-      }
-      showToast(`Language switched to ${lang.toUpperCase()}`, 'info');
+      if (pGreeting) pGreeting.innerText = data.pGreeting;
+      if (pSub) pSub.innerText = data.pSub;
+      if (pTalkTitle) pTalkTitle.innerText = data.pTalkTitle;
+      if (pTalkSub) pTalkSub.innerText = data.pTalkSub;
+      if (pCallTitle) pCallTitle.innerText = data.pCallTitle;
+      if (pCallSub) pCallSub.innerText = data.pCallSub;
+      if (pHeartTitle) pHeartTitle.innerText = data.pHeartTitle;
+      if (pHeartSub) pHeartSub.innerText = data.pHeartSub;
+      if (pSOSTitle) pSOSTitle.innerText = data.pSOSTitle;
+      if (pSOSSub) pSOSSub.innerText = data.pSOSSub;
+
+      showToast(`Language set to ${data.name}`, 'info');
+    }
+
+    function onLangChange() {
+      const el = document.getElementById('agent-lang');
+      if (el) setGlobalLanguage(el.value);
     }
 
     // Chat Drawer / Simulator focus
@@ -2203,10 +2398,14 @@ Rules:
     function testVoicePlayback() {
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance('Namaste. I am Ghajini, your memory companion. You are safe at home and doing wonderful today.');
+        const msg = (LANG_DATA[currentLang] && LANG_DATA[currentLang].greetingVoice) || 'Hello. I am Ghajini, your memory companion. You are safe at home and doing wonderful today.';
+        const utterance = new SpeechSynthesisUtterance(msg);
         utterance.rate = 0.85;
+        if (currentLang === 'hi') utterance.lang = 'hi-IN';
+        else if (currentLang === 'pa') utterance.lang = 'pa-IN';
+        else utterance.lang = 'en-IN';
         window.speechSynthesis.speak(utterance);
-        showToast('Playing voice sample at 0.85x calm rate', 'success');
+        showToast(`Playing voice sample (${currentLang.toUpperCase()}) at 0.85x calm rate`, 'success');
       } else {
         showToast('Speech synthesis triggered at 0.85x calm pace', 'info');
       }
@@ -2529,7 +2728,10 @@ Rules:
     }
     function patientOpenHeart() {
       refreshVitals();
-      showToast('❤️ आपकी धड़कन 74 BPM है। आप बिल्कुल सुरक्षित हैं।', 'success');
+      const msg = currentLang === 'hi' ? '❤️ आपकी धड़कन 74 BPM है। आप बिल्कुल सुरक्षित हैं।' :
+                  currentLang === 'pa' ? '❤️ ਤੁਹਾਡੀ ਧੜਕਣ 74 BPM ਹੈ। ਤੁਸੀਂ ਬਿਲਕੁਲ ਸੁਰੱਖਿਅਤ ਹੋ।' :
+                  '❤️ Heart rate is 74 BPM. You are completely safe and doing well.';
+      showToast(msg, 'success');
     }
     async function patientTriggerSOS() {
       try {
@@ -2538,7 +2740,10 @@ Rules:
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ patient_id: 1, note: 'Patient pressed Help / SOS on simple touch portal' })
         });
-        showToast('🚨 आपातकालीन सूचना भेज दी गई है! Alert sent to Priya.', 'error');
+        const msg = currentLang === 'hi' ? '🚨 आपातकालीन सूचना भेज दी गई है! Alert sent to Priya.' :
+                    currentLang === 'pa' ? '🚨 ਐਮਰਜੈਂਸੀ ਸੁਨੇਹਾ ਭੇਜਿਆ ਗਿਆ! Alert sent to Priya.' :
+                    '🚨 Emergency alert dispatched to Priya Sharma (+91 7604934874).';
+        showToast(msg, 'error');
         openPhoneCallModal();
       } catch (e) {
         showToast('SOS error: ' + e, 'error');
@@ -2549,7 +2754,7 @@ Rules:
     window.addEventListener('DOMContentLoaded', () => {
       refreshVitals();
       initECG();
-      onLangChange();
+      setGlobalLanguage('en');
     });
   </script>
 </body>
