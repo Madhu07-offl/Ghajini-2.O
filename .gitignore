@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+backend/.venv/
+.venv/
+.uv-python/
+*.db
+data/uploads/*
+!data/uploads/.gitkeep
+
+# Pytest
+.pytest_cache/
+
+# Flutter / Dart
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Environments
+.env
