@@ -8,6 +8,8 @@ backend/.venv/
 .venv/
 .uv-python/
 *.db
+data/*.json
+backend/data/*.json
 data/uploads/*
 !data/uploads/.gitkeep
 

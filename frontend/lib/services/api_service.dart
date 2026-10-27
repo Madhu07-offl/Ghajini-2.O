@@ -287,4 +287,113 @@ class ApiService {
     );
     return res.statusCode == 200;
   }
+
+  /// Patient AI Companion: Send message
+  Future<Map<String, dynamic>> sendCompanionMessage({
+    required String text,
+    String? lang,
+    String source = 'text',
+    int patientId = 1,
+  }) async {
+    final res = await _dio.post(
+      '/companion/message',
+      data: {
+        'patient_id': patientId,
+        'text': text,
+        'lang': lang,
+        'source': source,
+      },
+    );
+    return res.data as Map<String, dynamic>;
+  }
+
+  /// Patient AI Companion: Poll proactive message
+  Future<Map<String, dynamic>> getCompanionProactive({int patientId = 1}) async {
+    final res = await _dio.get(
+      '/companion/proactive',
+      queryParameters: {'patient_id': patientId},
+    );
+    return res.data as Map<String, dynamic>;
+  }
+
+  /// Patient AI Companion: Respond to gentle check-in
+  Future<void> respondCompanionCheckin({
+    required String status,
+    String? checkinId,
+    int patientId = 1,
+  }) async {
+    await _dio.post(
+      '/companion/check-in/respond',
+      data: {
+        'patient_id': patientId,
+        'checkin_id': checkinId,
+        'status': status,
+      },
+    );
+  }
+
+  /// Patient AI Companion: Teach a new memory
+  Future<Map<String, dynamic>> teachCompanion({
+    required String text,
+    String category = 'personal',
+    int patientId = 1,
+  }) async {
+    final res = await _dio.post(
+      '/companion/teach',
+      data: {
+        'patient_id': patientId,
+        'text': text,
+        'category': category,
+      },
+    );
+    return res.data as Map<String, dynamic>;
+  }
+
+  /// Patient AI Companion: Get settings
+  Future<Map<String, dynamic>> getCompanionSettings({int patientId = 1}) async {
+    final res = await _dio.get(
+      '/companion/settings',
+      queryParameters: {'patient_id': patientId},
+    );
+    return res.data as Map<String, dynamic>;
+  }
+
+  /// Patient AI Companion: Update settings
+  Future<Map<String, dynamic>> updateCompanionSettings({
+    required Map<String, dynamic> settings,
+    int patientId = 1,
+  }) async {
+    final res = await _dio.post(
+      '/companion/settings',
+      queryParameters: {'patient_id': patientId},
+      data: settings,
+    );
+    return res.data as Map<String, dynamic>;
+  }
+
+  /// Patient AI Companion: List conversation logs
+  Future<List<dynamic>> listCompanionConversations({
+    int patientId = 1,
+    int limit = 50,
+  }) async {
+    final res = await _dio.get(
+      '/companion/conversations',
+      queryParameters: {'patient_id': patientId, 'limit': limit},
+    );
+    return res.data as List<dynamic>;
+  }
+
+  /// Patient AI Companion: Mark reply as wrong
+  Future<void> markConversationWrong({
+    required String conversationId,
+    String? reason,
+  }) async {
+    await _dio.post(
+      '/companion/conversations/$conversationId/feedback',
+      data: {
+        'marked_wrong': true,
+        'reason': reason ?? 'Flagged by caregiver as inaccurate',
+      },
+    );
+  }
 }

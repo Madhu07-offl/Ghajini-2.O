@@ -5,7 +5,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ghajini 2.0 - Caregiver Dashboard</title>
+  <title>Ghajini 2.0 - Caregiver Dashboard & AI Companion</title>
   <style>
     :root {
       --primary: #1E3A8A;
@@ -27,11 +27,14 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     .badge { padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 700; text-transform: uppercase; }
     .badge-success { background: rgba(16, 185, 129, 0.2); color: #34D399; border: 1px solid #10B981; }
     .badge-primary { background: rgba(30, 58, 138, 0.4); color: #93C5FD; border: 1px solid #3B82F6; }
+    .badge-intent { background: #EDE9FE; color: #6D28D9; border: 1px solid #C4B5FD; font-size: 12px; padding: 3px 8px; border-radius: 6px; }
+    .badge-mood { background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A; font-size: 12px; padding: 3px 8px; border-radius: 6px; }
+    .badge-grounded { background: #DCFCE7; color: #166534; border: 1px solid #86EFAC; font-size: 12px; padding: 3px 8px; border-radius: 6px; }
     .container { max-width: 1200px; margin: 28px auto; padding: 0 20px; }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
     .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 24px; }
     @media (max-width: 900px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
-    .card { background: var(--card-bg); border-radius: 16px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #E2E8F0; }
+    .card { background: var(--card-bg); border-radius: 16px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #E2E8F0; margin-bottom: 24px; }
     .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
     .card-title { font-size: 18px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; }
     .btn { padding: 10px 18px; border-radius: 10px; border: none; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; }
@@ -43,6 +46,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     .btn-danger:hover { background: #DC2626; }
     .btn-outline { background: white; border: 1.5px solid #CBD5E1; color: var(--text); }
     .btn-outline:hover { background: #F1F5F9; }
+    .btn-pill { padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; border: 1px solid #CBD5E1; background: #F8FAFC; cursor: pointer; }
+    .btn-pill:hover { background: #E2E8F0; }
     .stat-number { font-size: 44px; font-weight: 800; line-height: 1; }
     .stat-label { font-size: 14px; color: var(--text-muted); margin-top: 6px; font-weight: 600; }
     /* Daily Summary */
@@ -64,15 +69,21 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     /* Test box */
     .test-box { display: flex; gap: 10px; margin-top: 14px; }
     .test-input { flex: 1; padding: 12px 16px; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 16px; }
-    .test-answer { margin-top: 14px; padding: 16px; border-radius: 10px; background: #F1F5F9; font-size: 16px; font-weight: 600; min-height: 48px; }
+    .test-answer { margin-top: 14px; padding: 18px; border-radius: 12px; background: #F1F5F9; font-size: 16px; font-weight: 600; min-height: 52px; line-height: 1.5; }
+    /* Companion chat style */
+    .companion-reply-box { margin-top: 16px; padding: 20px; border-radius: 14px; background: #F0FDF4; border: 1.5px solid #BBF7D0; }
+    .companion-reply-text { font-size: 22px; font-weight: 700; color: #166534; line-height: 1.4; margin-bottom: 12px; }
+    .companion-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .person-card { display: flex; align-items: center; gap: 14px; background: white; border: 1px solid #E2E8F0; border-radius: 12px; padding: 12px 16px; margin-top: 14px; }
+    .person-avatar { width: 52px; height: 52px; border-radius: 50%; background: #DBEAFE; color: #1E3A8A; font-weight: 800; display: flex; align-items: center; justify-content: center; font-size: 20px; }
   </style>
 </head>
 <body>
 
   <header>
     <div class="header-title">
-      <h1>Ghajini 2.0 — Caregiver Dashboard</h1>
-      <p>AI Memory Companion for Alzheimer's Patients</p>
+      <h1>Ghajini 2.0 — Patient AI Companion</h1>
+      <p>Caregiver Command Center & Live Memory Companion</p>
     </div>
     <div class="header-badges">
       <span class="badge badge-success">Backend: Online</span>
@@ -102,67 +113,110 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- Row 2: Daily Factual Summary -->
-    <div class="card" style="margin-bottom: 24px;">
+    <!-- Row 2: LIVE PATIENT AI COMPANION INTERFACE -->
+    <div class="card" style="border: 2px solid #3B82F6;">
       <div class="card-header">
-        <div class="card-title">
-          <span>Today's Factual Activity Summary</span>
+        <div class="card-title" style="font-size: 20px; color: #1E3A8A;">
+          <span>🤖 Patient AI Companion (Live Pipeline /v1/companion/message)</span>
         </div>
-        <button class="btn btn-outline" onclick="loadDashboard()">Refresh Live</button>
+        <div style="display: flex; gap: 8px;">
+          <select id="comp-lang-select" class="btn-pill" style="padding: 6px 12px;">
+            <option value="en">English (en-IN)</option>
+            <option value="hi" selected>Hindi (hi-IN)</option>
+            <option value="pa">Punjabi (pa-IN)</option>
+          </select>
+          <button class="btn btn-outline" onclick="pollProactive()">Poll Proactive (/proactive)</button>
+        </div>
       </div>
-      <div class="daily-box" id="daily-summary-text">
-        Loading today's recorded activities...
+
+      <p style="color: var(--text-muted); font-size: 15px; margin-bottom: 12px;">
+        Talk directly to Ghajini using the rule-based intent router, memory retrieval, mood reassurance, and anti-hallucination guardrail:
+      </p>
+
+      <!-- Quick prompts -->
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px;">
+        <span style="font-size: 13px; font-weight: 700; color: var(--text-muted); align-self: center;">Quick test:</span>
+        <button class="btn-pill" onclick="setCompPrompt('Who is Priya?')">Who is Priya?</button>
+        <button class="btn-pill" onclick="setCompPrompt('What day is it today?')">What day is it?</button>
+        <button class="btn-pill" onclick="setCompPrompt('Did I take my morning medicine?')">Did I take my medicine?</button>
+        <button class="btn-pill" onclick="setCompPrompt('What do I do today?')">What do I do today?</button>
+        <button class="btn-pill" onclick="setCompPrompt('Madad karo main gir gayi')">🚨 Help / Emergency (Hindi)</button>
+        <button class="btn-pill" onclick="setCompPrompt('Call my daughter')">📞 Call Family</button>
+      </div>
+
+      <div class="test-box">
+        <input type="text" id="comp-input" class="test-input" placeholder="Say or type something to Ghajini... (e.g. Who is Priya? / Dawai kab leni hai?)">
+        <button class="btn btn-primary" onclick="sendCompanionMessage()">Talk to Ghajini</button>
+      </div>
+
+      <!-- Live Companion Response Box -->
+      <div class="companion-reply-box" id="comp-reply-container" style="display: none;">
+        <div class="companion-reply-text" id="comp-reply-text">Ghajini's reply will appear here...</div>
+        <div class="companion-meta" id="comp-meta">
+          <!-- Filled dynamically -->
+        </div>
+        <div id="comp-person-card"></div>
       </div>
     </div>
 
-    <!-- Row 3: Weekly Pattern & Repeated Questions -->
-    <div class="grid-2" style="margin-bottom: 24px;">
-      
-      <!-- Weekly Bar Chart -->
+    <!-- Row 3: Daily Summary & Weekly History -->
+    <div class="grid-2">
+      <!-- Daily Factual Summary -->
       <div class="card">
         <div class="card-header">
-          <div class="card-title">Weekly Dose Pattern (Last 7 Days)</div>
+          <div class="card-title">Today's Factual Activity Summary</div>
+          <button class="btn btn-outline" onclick="loadDashboard()">Refresh</button>
+        </div>
+        <div class="daily-box" id="daily-summary-text">Loading today's recorded activities...</div>
+      </div>
+
+      <!-- Weekly Pattern -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Weekly Dose Pattern</div>
           <div style="font-size: 13px; font-weight: 700;">
             <span style="color: var(--success);">&#9632; Taken</span> &nbsp;
             <span style="color: var(--danger);">&#9632; Missed</span>
           </div>
         </div>
-        <div class="chart-container" id="chart-bars">
-          <!-- Filled dynamically -->
-        </div>
+        <div class="chart-container" id="chart-bars"></div>
       </div>
+    </div>
 
+    <!-- Row 4: Repeated Questions & Teach the Companion -->
+    <div class="grid-2">
       <!-- Top Repeated Questions -->
       <div class="card">
-        <div class="card-title" style="margin-bottom: 16px;">Top Repeated Questions</div>
+        <div class="card-title" style="margin-bottom: 16px;">Top Repeated Questions (Logged for Review)</div>
         <div id="questions-list">
           <div class="question-item"><span class="question-text">Loading questions...</span></div>
         </div>
       </div>
 
+      <!-- Teach the Companion -->
+      <div class="card">
+        <div class="card-title" style="margin-bottom: 10px;">Teach the Companion (Caregiver Knowledge Form)</div>
+        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 12px;">
+          Add a new personal fact or routine in plain text. Text is sanitized against prompt injections and embedded into FAISS immediately:
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <input type="text" id="teach-input" class="test-input" placeholder="e.g. Priya visits every Diwali with grandson Kabir.">
+          <button class="btn btn-success" onclick="teachMemory()">Teach & Embed Memory</button>
+        </div>
+        <div id="teach-status" style="margin-top: 10px; font-size: 14px; font-weight: 600;"></div>
+      </div>
     </div>
 
-    <!-- Row 4: Live Demo Control Center & Memory Testing -->
+    <!-- Row 5: Demo Controls -->
     <div class="card">
       <div class="card-title" style="margin-bottom: 10px;">Live Demo Control Center</div>
-      <p style="color: var(--text-muted); font-size: 15px;">Execute live demonstration commands directly against the FastAPI backend:</p>
-      
+      <p style="color: var(--text-muted); font-size: 15px;">Execute live demonstration commands directly against the backend:</p>
       <div class="actions-grid">
         <button class="btn btn-primary" onclick="resetDemo()">Reset Demo Data</button>
         <button class="btn btn-success" onclick="triggerReminder()">Trigger Reminder Now</button>
         <button class="btn btn-danger" onclick="triggerSOS()">Trigger SOS Alert</button>
         <a href="/v1/privacy/export" class="btn btn-outline" style="text-decoration: none; justify-content: center;">Export Personal Data (ZIP)</a>
       </div>
-
-      <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #E2E8F0;">
-        <div class="card-title" style="font-size: 16px;">Test Memory Question Retrieval (/v1/ask):</div>
-        <div class="test-box">
-          <input type="text" id="ask-input" class="test-input" placeholder="e.g. Where does Priya live? / Dawai kab leni hai?">
-          <button class="btn btn-primary" onclick="askQuestion()">Ask Ghajini</button>
-        </div>
-        <div class="test-answer" id="ask-answer">Answer will appear here grounded strictly in stored semantic memories...</div>
-      </div>
-
     </div>
 
   </div>
@@ -170,7 +224,6 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   <script>
     async function loadDashboard() {
       try {
-        // 1. Fetch Summary
         const res = await fetch('/v1/dashboard/summary');
         const data = await res.json();
 
@@ -217,13 +270,110 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           });
         }
 
-        // 2. Fetch Daily Summary
+        // Fetch Daily Summary
         const dailyRes = await fetch('/v1/dashboard/daily-summary');
         const dailyData = await dailyRes.json();
         document.getElementById('daily-summary-text').innerText = dailyData.summary;
 
       } catch (e) {
         console.error(e);
+      }
+    }
+
+    function setCompPrompt(text) {
+      document.getElementById('comp-input').value = text;
+      sendCompanionMessage();
+    }
+
+    async function sendCompanionMessage() {
+      const text = document.getElementById('comp-input').value.trim();
+      if (!text) return;
+      const lang = document.getElementById('comp-lang-select').value;
+      const container = document.getElementById('comp-reply-container');
+      const replyEl = document.getElementById('comp-reply-text');
+      const metaEl = document.getElementById('comp-meta');
+      const cardEl = document.getElementById('comp-person-card');
+
+      container.style.display = 'block';
+      replyEl.innerText = 'Ghajini is thinking...';
+      metaEl.innerHTML = '';
+      cardEl.innerHTML = '';
+
+      try {
+        const res = await fetch('/v1/companion/message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ patient_id: 1, text: text, lang: lang, source: 'text' })
+        });
+        const data = await res.json();
+
+        replyEl.innerText = data.reply;
+        metaEl.innerHTML = `
+          <span class="badge-intent">Intent: ${data.intent}</span>
+          <span class="badge-mood">Mood: ${data.mood}</span>
+          <span class="badge-grounded">${data.grounded ? 'Grounded: Stored Facts' : 'Ungrounded Fallback'}</span>
+          <span style="font-size: 12px; color: var(--text-muted);">Lang: ${data.lang.toUpperCase()}</span>
+        `;
+
+        if (data.actions && data.actions.length > 0) {
+          data.actions.forEach(act => {
+            metaEl.innerHTML += `<span style="background: #FEE2E2; color: #991B1B; font-weight: 700; font-size: 12px; padding: 3px 8px; border-radius: 6px;">Action: ${act}</span>`;
+          });
+        }
+
+        if (data.person) {
+          cardEl.innerHTML = `
+            <div class="person-card">
+              <div class="person-avatar">${data.person.name.charAt(0)}</div>
+              <div>
+                <div style="font-weight: 700; font-size: 16px;">${data.person.name} (${data.person.relationship})</div>
+                <div style="font-size: 13px; color: var(--text-muted);">${data.person.notes || ''}</div>
+              </div>
+            </div>
+          `;
+        }
+
+        loadDashboard();
+      } catch (e) {
+        replyEl.innerText = 'I am not sure. Shall I call your family?';
+        console.error(e);
+      }
+    }
+
+    async function pollProactive() {
+      try {
+        const res = await fetch('/v1/companion/proactive');
+        const data = await res.json();
+        if (data.has_message) {
+          alert(`[Proactive Companion ${data.message.type.toUpperCase()}]\n\n${data.message.message}`);
+        } else {
+          alert('No proactive message due at this time (or currently in quiet hours).');
+        }
+      } catch (e) {
+        alert('Proactive check error: ' + e);
+      }
+    }
+
+    async function teachMemory() {
+      const text = document.getElementById('teach-input').value.trim();
+      if (!text) return;
+      const statusEl = document.getElementById('teach-status');
+      statusEl.style.color = '#1E3A8A';
+      statusEl.innerText = 'Sanitizing and embedding into FAISS...';
+
+      try {
+        const res = await fetch('/v1/companion/teach', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ patient_id: 1, text: text, category: 'personal' })
+        });
+        const data = await res.json();
+        statusEl.style.color = '#166534';
+        statusEl.innerText = `Success! Embedded memory id=${data.id}: "${data.text}"`;
+        document.getElementById('teach-input').value = '';
+      } catch (e) {
+        statusEl.style.color = '#DC2626';
+        statusEl.innerText = 'Error saving memory: ' + e;
       }
     }
 
@@ -262,28 +412,6 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         loadDashboard();
       } catch (e) {
         alert('SOS failed: ' + e);
-      }
-    }
-
-    async function askQuestion() {
-      const q = document.getElementById('ask-input').value.trim();
-      if (!q) return;
-      const ansEl = document.getElementById('ask-answer');
-      ansEl.innerText = 'Searching memories and generating answer...';
-
-      try {
-        const res = await fetch('/v1/ask', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: q, lang: 'en' })
-        });
-        const data = await res.json();
-        ansEl.innerText = (data.grounded ? '💡 ' : '❓ ') + data.answer;
-        ansEl.style.color = data.grounded ? '#166534' : '#92400E';
-        ansEl.style.background = data.grounded ? '#F0FDF4' : '#FEF3C7';
-        loadDashboard();
-      } catch (e) {
-        ansEl.innerText = 'Error querying memories: ' + e;
       }
     }
 

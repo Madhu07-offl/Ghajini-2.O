@@ -502,6 +502,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
               const SizedBox(height: 16),
 
+              // Button: Talk to Ghajini (AI Companion)
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 80),
+                  backgroundColor: const Color(0xFF1E3A8A),
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                onPressed: () => context.push('/companion'),
+                icon: const Text('🤖', style: TextStyle(fontSize: 32)),
+                label: const Text(
+                  'Talk to Ghajini (Companion)',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
               // Button 2: Ask me anything
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(

@@ -1,7 +1,7 @@
 import hashlib
 import json
 import logging
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 
 logger = logging.getLogger(__name__)
@@ -71,12 +71,17 @@ class MemoryRetrieval:
                 logger.warning(f"SentenceTransformer encode failed: {e}. Using fallback embed.")
         return self._fallback_embed(text)
 
-    def add_memory(self, memory_id: int, text: str, existing_embedding_json: Optional[str] = None) -> List[float]:
-        if existing_embedding_json:
-            try:
-                emb_list = json.loads(existing_embedding_json)
-                norm_emb = self._normalize(np.array(emb_list, dtype=np.float32))
-            except Exception:
+    def add_memory(self, memory_id: int, text: str, existing_embedding_json: Optional[Any] = None) -> List[float]:
+        if existing_embedding_json is not None:
+            if isinstance(existing_embedding_json, str):
+                try:
+                    emb_list = json.loads(existing_embedding_json)
+                    norm_emb = self._normalize(np.array(emb_list, dtype=np.float32))
+                except Exception:
+                    norm_emb = self.embed_text(text)
+            elif isinstance(existing_embedding_json, np.ndarray):
+                norm_emb = self._normalize(existing_embedding_json)
+            else:
                 norm_emb = self.embed_text(text)
         else:
             norm_emb = self.embed_text(text)

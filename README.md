@@ -200,6 +200,55 @@ All endpoints are prefixed with `/v1` and return JSON:
 | `POST` | `/reminders/{id}/respond` | Respond (`acknowledged`, `snoozed`, `distressed`) |
 | `GET` | `/privacy/export` | Download full personal data as a ZIP archive (`export.json`) |
 | `DELETE` | `/privacy/all` | Wipe all patient records, faces, vectors, and audit logs |
+| `POST` | `/companion/message` | Companion AI brain: intent router, fact retrieval, mood reassurance |
+| `GET` | `/companion/proactive` | Proactive morning greeting, gentle check-ins, evening wind-down (poll 30s) |
+| `POST` | `/companion/check-in/respond` | Patient check-in response (`ok`, `need_help` -> alerts caregiver) |
+| `POST` | `/companion/teach` | Caregiver form: add plain-text fact, sanitizes injections, auto-embeds |
+| `GET` | `/companion/settings` | Caregiver companion configuration (wake time, language, tone, quiet hours) |
+| `POST` | `/companion/settings` | Update caregiver companion settings |
+| `GET` | `/companion/conversations` | Conversation history with intent, mood, and grounded flag |
+| `POST` | `/companion/conversations/{id}/feedback` | Caregiver feedback: mark reply as wrong to exclude from retrieval |
+
+---
+
+## Patient AI Companion Walkthrough & How to Try Each Intent
+
+The Patient AI Companion is an elderly-friendly, empathetic conversational assistant designed specifically for individuals with memory loss. It uses a rule-first intent router with strict anti-hallucination guardrails and multilingual support (English, Hindi, Punjabi).
+
+### Trying Each Intent via `/v1/companion/message`
+
+1. **Emergency (`emergency`)**:
+   - **Sample inputs**: `"Help, I fell"`, `"Madad karo main gir gayi"`, `"Ghabrahat ho rahi hai"`, `"Bachao"`
+   - **Behavior**: Skips the LLM completely, immediately dispatches a caregiver alert to the database/SMS, and replies with calm reassurance: *"Help is coming. I am telling your family."* (`action: ["show_sos", "call_family"]`).
+
+2. **Who is This? (`who_is`)**:
+   - **Sample inputs**: `"Who is Priya?"`, `"प्रिया कौन है?"`, `"Who is Dr. Sharma?"`
+   - **Behavior**: Queries the consented People table and semantic memories. Returns the relationship, notes, and a person photo card.
+
+3. **Where / When (`where_when`)**:
+   - **Sample inputs**: `"Where am I?"`, `"What day is it today?"`, `"What time is it?"`, `"Aaj kaun sa din hai?"`
+   - **Behavior**: Combines the real-time system clock, date, and registered Home address from the `Place` table to give exact orientation.
+
+4. **Medication & Routine (`medicine`)**:
+   - **Sample inputs**: `"Did I take my medicine today?"`, `"Dawai li thi maine?"`
+   - **Behavior**: Queries `reminder_logs` for today's doses only.
+   - **Medical Advice Guardrail**: If asked for dosage advice (*"How many tablets should I take?"*), refuses medical consultation and replies: *"Please ask your doctor."*
+
+5. **Routine & Schedule (`routine`)**:
+   - **Sample inputs**: `"What do I do today?"`, `"What is next today?"`, `"Aaj kya karna hai?"`
+   - **Behavior**: Lists today's upcoming scheduled tasks and reminders in chronological order.
+
+6. **Call Family (`call_family`)**:
+   - **Sample inputs**: `"Call my daughter"`, `"Call Priya"`, `"Phone milao"`, `"Call family"`
+   - **Behavior**: Returns `action: ["call_family"]` which prompts the app to trigger the emergency phone dialer.
+
+7. **Smalltalk & Warmth (`smalltalk`)**:
+   - **Sample inputs**: `"Hello"`, `"Good morning"`, `"Namaste"`, `"Sat sri akal"`, `"Kaise ho?"`
+   - **Behavior**: Replies with a friendly greeting in the patient's language.
+
+8. **Unknown / Unanswerable Query (`unknown`)**:
+   - **Sample inputs**: `"What is the secret code to the safe in Antarctica?"`
+   - **Behavior**: Anti-hallucination guardrail catches zero grounding and replies safely: *"I am not sure. Shall I call your family?"*
 
 ---
 
@@ -208,8 +257,12 @@ All endpoints are prefixed with `/v1` and return JSON:
 | Component | Status | Details |
 |---|---|---|
 | **FastAPI Backend & Routers** | Fully functional | All endpoints operational under `/v1` |
+| **Patient AI Companion Brain** | Fully functional | 7 intents, mood reassurance, repeated-question logging, and Ollama fallback |
+| **Proactive Companion** | Fully functional | Morning greetings, gentle check-ins, evening wind-down, quiet hours |
+| **Teach the Companion** | Fully functional | Prompt injection sanitization + instant SentenceTransformer FAISS embedding |
+| **Conversation Review & Feedback**| Fully functional | Read-only logs + mark wrong feedback exclusion |
 | **Caregiver Dashboard** | Fully functional | 7-day adherence, weekly bar chart, top questions, daily summary |
-| **Face Engine & FAISS** | Fully functional | InsightFace buffalo_l + normalized 512-d index |
+| **Face Engine & FAISS** | Fully functional | InsightFace buffalo_l + normalized 512-d index (never guesses below 0.38) |
 | **Memory Retrieval** | Fully functional | Multilingual SentenceTransformers + FAISS |
 | **Voice Transcription** | Fully functional | faster-whisper small int8 on CPU + VAD filter |
 | **Demo Mode & Hidden Screen**| Fully functional | `/demo/reset`, `/demo/trigger-reminder`, long-press title dialog |
