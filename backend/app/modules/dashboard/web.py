@@ -36,7 +36,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Ghajini 2.0 - Voice Agent Studio & Clinical Care Dashboard</title>
   <link rel="icon" type="image/png" href="data:image/png;base64,__LOGO_B64__">
   <!-- Modern clean typography: Inter -->
@@ -820,15 +820,52 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
       align-items: center;
       gap: 8px;
       transition: all 0.2s;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
     }
     .patient-big-btn:hover {
       transform: translateY(-2px);
       box-shadow: 0 8px 18px rgba(0,0,0,0.08);
     }
+    .patient-btn-icon {
+      font-size: 40px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .patient-btn-text {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      width: 100%;
+    }
+    .patient-btn-title {
+      font-size: 19px;
+      font-weight: 800;
+      line-height: 1.2;
+    }
     .p-btn-talk { border-color: #3B82F6; background: #EFF6FF; }
+    .p-btn-talk .patient-btn-title { color: #1F2937; }
+    .p-btn-talk .patient-btn-sub { color: var(--text-muted); }
+
     .p-btn-call { border-color: var(--primary); background: var(--primary-light); }
+    .p-btn-call .patient-btn-title { color: #065F46; }
+    .p-btn-call .patient-btn-sub { color: #047857; }
+
     .p-btn-heart { border-color: #F43F5E; background: #FFF1F2; }
+    .p-btn-heart .patient-btn-title { color: #9F1239; }
+    .p-btn-heart .patient-btn-sub { color: #BE123C; }
+
     .p-btn-sos { border-color: #EF4444; background: #FEF2F2; }
+    .p-btn-sos .patient-btn-title { color: #991B1B; }
+    .p-btn-sos .patient-btn-sub { color: #B91C1C; }
+
+    .patient-btn-sub {
+      font-size: 13.5px;
+      line-height: 1.3;
+    }
 
     /* ======================================================== */
     /* MOBILE OPTIMIZATIONS (Screen width <= 768px)             */
@@ -838,9 +875,11 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
         overflow-x: hidden;
         max-width: 100vw;
         width: 100%;
+        min-height: 100dvh;
+        -webkit-font-smoothing: antialiased;
       }
       body {
-        padding-bottom: calc(64px + env(safe-area-inset-bottom, 16px));
+        padding-bottom: calc(60px + env(safe-area-inset-bottom, 16px));
       }
 
       /* 1. Sidebar becomes Bottom Thumb Navigation Bar */
@@ -890,6 +929,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
         color: var(--text-muted);
         background: transparent;
         position: relative;
+        -webkit-tap-highlight-color: transparent;
       }
       .nav-icon-btn svg {
         width: 19px;
@@ -927,6 +967,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
         margin-left: 0;
         width: 100%;
         max-width: 100vw;
+        min-height: 100dvh;
         overflow-x: hidden;
       }
 
@@ -936,6 +977,8 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
         padding: 10px 12px;
         flex-direction: column;
         gap: 8px;
+        background: #FFFFFF;
+        border-bottom: 1px solid var(--card-border);
       }
       .desktop-top-bar {
         display: none !important;
@@ -951,12 +994,14 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
         align-items: center;
         justify-content: space-between;
         width: 100%;
+        gap: 6px;
       }
       .mobile-brand {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 8px;
         cursor: pointer;
+        min-width: 0;
       }
       .mobile-logo-img {
         width: 36px;
@@ -965,10 +1010,12 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
         border-radius: 8px;
         background: var(--primary-light);
         padding: 2px;
+        flex-shrink: 0;
       }
       .mobile-brand-meta {
         display: flex;
         flex-direction: column;
+        min-width: 0;
       }
       .mobile-brand-name {
         font-size: 15px;
@@ -976,6 +1023,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
         color: var(--text-title);
         letter-spacing: -0.2px;
         line-height: 1.2;
+        white-space: nowrap;
       }
       .mobile-brand-sub {
         font-size: 11px;
@@ -984,6 +1032,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
         display: flex;
         align-items: center;
         gap: 5px;
+        white-space: nowrap;
       }
       .badge-dot-live {
         width: 6px;
@@ -996,25 +1045,46 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
       .mobile-header-actions {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 6px;
+        flex-shrink: 0;
+      }
+      .mobile-lang-pill {
+        display: flex;
+        align-items: center;
+        background: #F3F4F6;
+        border: 1px solid var(--card-border);
+        border-radius: 8px;
+        padding: 0 6px;
+        height: 32px;
+        gap: 4px;
+      }
+      .mobile-lang-dropdown {
+        border: none;
+        background: transparent;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-title);
+        outline: none;
+        cursor: pointer;
       }
       .btn-patient-switch-mobile {
         background: #EDE9FE;
         color: #6D28D9;
         border: 1px solid #DDD6FE;
-        height: 34px;
-        padding: 0 11px;
+        height: 32px;
+        padding: 0 10px;
         border-radius: 8px;
-        font-size: 12.5px;
+        font-size: 12px;
         font-weight: 600;
         cursor: pointer;
         display: inline-flex;
         align-items: center;
-        gap: 5px;
+        gap: 4px;
+        -webkit-tap-highlight-color: transparent;
       }
       .btn-avatar-mobile {
-        width: 34px;
-        height: 34px;
+        width: 32px;
+        height: 32px;
         border-radius: 50%;
         background: var(--primary);
         color: white;
@@ -1025,6 +1095,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
         justify-content: center;
         border: none;
         cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
       }
 
       /* Mobile Action Ribbon */
@@ -1052,6 +1123,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
         flex-shrink: 0;
         cursor: pointer;
         border: none;
+        -webkit-tap-highlight-color: transparent;
       }
       .ribbon-btn-teal {
         background: var(--primary);
@@ -1073,18 +1145,22 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
 
       /* 4. Tab Bar on Mobile */
       .tab-bar {
-        padding: 6px 10px;
-        min-height: 44px;
+        padding: 6px 8px;
+        min-height: 42px;
       }
       .segmented-tabs {
         width: 100%;
         overflow-x: auto;
         flex-wrap: nowrap;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
       }
+      .segmented-tabs::-webkit-scrollbar { display: none; }
       .tab-btn {
-        padding: 6px 11px;
+        padding: 6px 10px;
         font-size: 12px;
         flex-shrink: 0;
+        -webkit-tap-highlight-color: transparent;
       }
       .tab-bar-right {
         display: none;
@@ -1092,7 +1168,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
 
       /* 5. Main Content Area & Cards */
       .content-area {
-        padding: 12px 10px calc(76px + env(safe-area-inset-bottom, 14px)) 10px;
+        padding: 10px 10px calc(76px + env(safe-area-inset-bottom, 14px)) 10px;
         width: 100%;
         max-width: 100vw;
         box-sizing: border-box;
@@ -1144,10 +1220,11 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
         width: 100%;
         box-sizing: border-box;
       }
+      .setting-tile.setting-tile-switch,
       .setting-tile:has(.switch) {
-        flex-direction: row;
-        align-items: center;
-        justify-content: space-between;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
       }
       .setting-tile-info {
         width: 100%;
@@ -1193,17 +1270,59 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
         height: 380px;
       }
 
-      /* Vitals Grid Stacking on Mobile */
+      /* Vitals Grid: 3-column compact responsive display */
       .vitals-grid {
-        grid-template-columns: 1fr;
-        gap: 8px;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+      }
+      .vital-box {
+        padding: 8px 4px;
+        text-align: center;
+      }
+      .vital-title {
+        font-size: 9.5px;
+        letter-spacing: 0.2px;
+      }
+      .vital-value {
+        font-size: 16px;
+      }
+      .vital-sub {
+        font-size: 10px;
       }
 
-      /* Modals on Mobile */
+      /* Modals on Mobile: Native Bottom Sheet Pattern */
+      .modal-overlay {
+        align-items: flex-end;
+        padding: 0;
+      }
       .modal-card {
-        padding: 18px 14px;
-        max-width: 95vw;
-        border-radius: 14px;
+        width: 100%;
+        max-width: 100vw;
+        border-radius: 20px 20px 0 0;
+        padding: 20px 16px calc(24px + env(safe-area-inset-bottom, 16px)) 16px;
+        max-height: 85dvh;
+        box-shadow: 0 -8px 28px rgba(0,0,0,0.22);
+        animation: sheet-up 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+        margin: 0;
+      }
+      @keyframes sheet-up {
+        from { transform: translateY(100%); }
+        to { transform: translateY(0); }
+      }
+      .modal-footer-actions {
+        display: flex;
+        flex-direction: column-reverse;
+        gap: 8px;
+        width: 100%;
+        margin-top: 14px;
+      }
+      .modal-footer-actions .btn-teal,
+      .modal-footer-actions .btn-ask-ai,
+      .modal-footer-actions .btn-outline {
+        width: 100%;
+        justify-content: center;
+        height: 42px;
+        font-size: 13.5px;
       }
 
       /* Toasts Mobile Positioning */
@@ -1218,14 +1337,84 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
         padding: 10px 12px;
       }
 
-      /* Patient Portal Single Column on Mobile */
+      /* Patient Portal Single Column Banner Layout on Mobile */
       .patient-big-grid {
         grid-template-columns: 1fr;
         gap: 12px;
+        width: 100%;
       }
       .patient-big-btn {
-        padding: 18px 12px;
-        min-height: 76px;
+        flex-direction: row;
+        align-items: center;
+        text-align: left;
+        padding: 16px 18px;
+        min-height: 74px;
+        gap: 16px;
+        border-radius: 16px;
+      }
+      .patient-big-btn:active {
+        transform: scale(0.98);
+      }
+      .patient-btn-icon {
+        font-size: 34px;
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.7);
+        flex-shrink: 0;
+      }
+      .patient-btn-text {
+        align-items: flex-start;
+        text-align: left;
+      }
+      .patient-btn-title {
+        font-size: 17.5px;
+      }
+      .patient-btn-sub {
+        font-size: 12.5px;
+      }
+    }
+
+    /* Narrow Phone Screens (<= 380px) */
+    @media (max-width: 380px) {
+      .mobile-brand-name {
+        font-size: 13.5px;
+      }
+      .mobile-brand-sub {
+        font-size: 10px;
+      }
+      .btn-patient-switch-mobile {
+        padding: 0 8px;
+        font-size: 11.5px;
+        height: 30px;
+      }
+      .mobile-lang-pill {
+        padding: 0 4px;
+        height: 30px;
+      }
+      .mobile-lang-dropdown {
+        font-size: 11px;
+      }
+      .btn-avatar-mobile {
+        width: 30px;
+        height: 30px;
+        font-size: 12px;
+      }
+      .vitals-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 4px;
+      }
+      .vital-box {
+        padding: 6px 2px;
+      }
+      .vital-title {
+        font-size: 8.5px;
+      }
+      .vital-value {
+        font-size: 14px;
+      }
+      .vital-sub {
+        font-size: 9px;
       }
     }
   </style>
@@ -1507,7 +1696,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
             </div>
 
             <!-- Setting Tile: Strict Grounding -->
-            <div class="setting-tile">
+            <div class="setting-tile setting-tile-switch">
               <div class="setting-tile-info">
                 <div class="setting-tile-title">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -1522,7 +1711,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
             </div>
 
             <!-- Setting Tile: Emergency Phrase Interception -->
-            <div class="setting-tile">
+            <div class="setting-tile setting-tile-switch">
               <div class="setting-tile-info">
                 <div class="setting-tile-title">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#DC2626"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -1650,7 +1839,7 @@ Rules:
               </div>
             </div>
 
-            <div class="setting-tile">
+            <div class="setting-tile setting-tile-switch">
               <div class="setting-tile-info">
                 <div class="setting-tile-title">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -1935,30 +2124,38 @@ Rules:
       <div class="patient-big-grid">
         <!-- 1. Talk to Ghajini -->
         <div class="patient-big-btn p-btn-talk" onclick="patientOpenTalk()">
-          <div style="font-size: 40px;">🤖</div>
-          <div style="font-size: 19px; font-weight: 800; color: #1F2937;" id="p-talk-title">Talk to Ghajini</div>
-          <div style="font-size: 13.5px; color: var(--text-muted);" id="p-talk-sub">Ask me any question</div>
+          <div class="patient-btn-icon">🤖</div>
+          <div class="patient-btn-text">
+            <div class="patient-btn-title" id="p-talk-title">Talk to Ghajini</div>
+            <div class="patient-btn-sub" id="p-talk-sub">Ask me any question</div>
+          </div>
         </div>
 
         <!-- 2. Call Priya -->
         <div class="patient-big-btn p-btn-call" onclick="openPhoneCallModal()">
-          <div style="font-size: 40px;">📞</div>
-          <div style="font-size: 19px; font-weight: 800; color: #065F46;" id="p-call-title">Call Priya</div>
-          <div style="font-size: 13.5px; color: #047857;" id="p-call-sub">+91 7604934874 (Direct Call)</div>
+          <div class="patient-btn-icon">📞</div>
+          <div class="patient-btn-text">
+            <div class="patient-btn-title" id="p-call-title">Call Priya</div>
+            <div class="patient-btn-sub" id="p-call-sub">+91 7604934874 (Direct Call)</div>
+          </div>
         </div>
 
         <!-- 3. Heart & Pulse -->
         <div class="patient-big-btn p-btn-heart" onclick="patientOpenHeart()">
-          <div style="font-size: 40px;">❤️</div>
-          <div style="font-size: 19px; font-weight: 800; color: #9F1239;" id="p-heart-title">Heart & Vitals</div>
-          <div style="font-size: 13.5px; color: #BE123C;" id="p-heart-status-sub">74 BPM &bull; Steady & Normal</div>
+          <div class="patient-btn-icon">❤️</div>
+          <div class="patient-btn-text">
+            <div class="patient-btn-title" id="p-heart-title">Heart & Vitals</div>
+            <div class="patient-btn-sub" id="p-heart-status-sub">74 BPM &bull; Steady & Normal</div>
+          </div>
         </div>
 
         <!-- 4. SOS Help -->
         <div class="patient-big-btn p-btn-sos" onclick="patientTriggerSOS()">
-          <div style="font-size: 40px;">🚨</div>
-          <div style="font-size: 19px; font-weight: 800; color: #991B1B;" id="p-sos-title">Need Help / SOS</div>
-          <div style="font-size: 13.5px; color: #B91C1C;" id="p-sos-sub">Alert family immediately</div>
+          <div class="patient-btn-icon">🚨</div>
+          <div class="patient-btn-text">
+            <div class="patient-btn-title" id="p-sos-title">Need Help / SOS</div>
+            <div class="patient-btn-sub" id="p-sos-sub">Alert family immediately</div>
+          </div>
         </div>
       </div>
     </section>
@@ -2026,7 +2223,7 @@ Rules:
         Connecting to safety router...
       </div>
 
-      <div style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;">
+      <div class="modal-footer-actions" style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;">
         <button class="btn-outline" onclick="copyCaregiverNumber()">📋 Copy Number</button>
         <button class="btn-teal" id="btn-dial-now" onclick="dialCaregiverDirect()">📞 Open Dialer (tel:)</button>
         <button class="btn-outline" onclick="closePhoneCallModal()">Dismiss</button>
@@ -2055,7 +2252,7 @@ Rules:
       <div class="form-group">
         <textarea id="ai-suggestion-input" class="form-control" rows="3" placeholder="Describe instructions or prompt tweaks..."></textarea>
       </div>
-      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+      <div class="modal-footer-actions" style="display: flex; justify-content: flex-end; gap: 8px;">
         <button class="btn-outline" onclick="closeAskAIModal()">Cancel</button>
         <button class="btn-ask-ai" onclick="generateAIPromptSuggestion()">Apply Optimized Prompt</button>
       </div>
@@ -2079,7 +2276,7 @@ Rules:
       <p style="font-size: 12.5px; color: var(--text-muted); line-height: 1.5; margin-bottom: 14px;">
         Connected to GitHub <code>Madhu07-offl/Ghajini-2.O</code>. Every push automatically rebuilds and deploys to Vercel within 10 seconds.
       </p>
-      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+      <div class="modal-footer-actions" style="display: flex; justify-content: flex-end; gap: 8px;">
         <button class="btn-outline" onclick="closeDeployModal()">Close</button>
         <button class="btn-teal" onclick="window.open('https://ghajini-2-0.vercel.app', '_blank')">Open Vercel App ↗</button>
       </div>
@@ -2108,7 +2305,7 @@ Rules:
         <label class="form-label">Relationship to Patient</label>
         <input type="text" id="cfg-rel" class="form-control" value="Daughter & Primary Guardian">
       </div>
-      <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;">
+      <div class="modal-footer-actions" style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;">
         <button class="btn-outline" onclick="closeCaregiverModal()">Cancel</button>
         <button class="btn-teal" onclick="saveCaregiverModal()">Save Information</button>
       </div>
@@ -2140,6 +2337,7 @@ Rules:
     // Tab Switcher
     function switchTab(tabId) {
       activeTab = tabId;
+      activePortal = 'studio';
 
       // Update Tab Bar buttons
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -2159,7 +2357,11 @@ Rules:
       });
 
       // Hide patient portal if open
-      document.getElementById('patient-portal-container').style.display = 'none';
+      const pContainer = document.getElementById('patient-portal-container');
+      if (pContainer) pContainer.style.display = 'none';
+
+      // Smooth scroll to top on tab change
+      window.scrollTo({ top: 0, behavior: 'smooth' });
 
       if (tabId === 'history') {
         loadRecentCalls();
@@ -2177,10 +2379,11 @@ Rules:
           const el = document.getElementById(id);
           if (el) el.style.display = 'none';
         });
-        pContainer.style.display = 'block';
+        if (pContainer) pContainer.style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
         showToast('Switched to Patient Simple View', 'info');
       } else {
-        pContainer.style.display = 'none';
+        if (pContainer) pContainer.style.display = 'none';
         switchTab(activeTab);
         showToast('Switched to Caregiver Studio', 'info');
       }
