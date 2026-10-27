@@ -215,6 +215,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         <button class="btn btn-primary" onclick="resetDemo()">Reset Demo Data</button>
         <button class="btn btn-success" onclick="triggerReminder()">Trigger Reminder Now</button>
         <button class="btn btn-danger" onclick="triggerSOS()">Trigger SOS Alert</button>
+        <button class="btn btn-primary" style="background: #166534;" onclick="triggerCallCaregiver()">Call Caregiver (+91 7604934874)</button>
         <a href="/v1/privacy/export" class="btn btn-outline" style="text-decoration: none; justify-content: center;">Export Personal Data (ZIP)</a>
       </div>
     </div>
@@ -412,6 +413,31 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         loadDashboard();
       } catch (e) {
         alert('SOS failed: ' + e);
+      }
+    }
+
+    async function triggerCallCaregiver() {
+      try {
+        const res = await fetch('/v1/calls/request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            patient_id: 1,
+            reason: 'Dashboard direct call test',
+            source: 'sos',
+            lang: 'en'
+          })
+        });
+        const data = await res.json();
+        if (data.allowed) {
+          alert(`📞 Calling ${data.contact.name} (${data.contact.phone})\n\nPatient Speech: "${data.patient_message}"\n\nCaregiver Briefing:\n${data.caregiver_briefing}`);
+          window.open(`tel:${data.contact.phone}`);
+          loadDashboard();
+        } else {
+          alert(`Call Paused: ${data.block_reason}`);
+        }
+      } catch (e) {
+        alert('Call request failed: ' + e);
       }
     }
 
