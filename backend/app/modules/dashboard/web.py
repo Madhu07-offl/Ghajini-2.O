@@ -36,7 +36,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Ghajini 2.0 - Voice Agent Studio & Clinical Care Dashboard</title>
   <link rel="icon" type="image/png" href="data:image/png;base64,__LOGO_B64__">
   <!-- Modern clean typography: Inter -->
@@ -62,11 +62,11 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
       --sidebar-width: 58px;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
     body { background-color: var(--bg-page); color: var(--text-body); min-height: 100vh; display: flex; }
 
     /* ======================================================== */
-    /* 1. LEFT SIDEBAR (58px, white, full height)               */
+    /* 1. LEFT SIDEBAR (Desktop 58px / Mobile Bottom Bar 58px)  */
     /* ======================================================== */
     .sidebar {
       width: var(--sidebar-width);
@@ -104,6 +104,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
       height: 42px;
       border-radius: 10px;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       color: var(--text-muted);
@@ -127,6 +128,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
       background: var(--primary);
     }
     .nav-icon-btn svg { width: 20px; height: 20px; stroke-width: 1.8; }
+    .nav-icon-label { display: none; font-size: 10px; font-weight: 600; margin-top: 2px; }
 
     .sidebar-bottom { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; }
     .sidebar-avatar {
@@ -158,10 +160,10 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
     /* 2. TOP HEADER BAR                                        */
     /* ======================================================== */
     .top-bar {
-      height: 60px;
+      min-height: 60px;
       background: #FFFFFF;
       border-bottom: 1px solid var(--card-border);
-      padding: 0 24px;
+      padding: 0 20px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -169,7 +171,10 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
       top: 0;
       z-index: 100;
     }
-    .top-bar-left { display: flex; align-items: center; gap: 12px; }
+    .top-bar-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .mobile-brand-icon { display: none; width: 34px; height: 34px; border-radius: 8px; background: var(--primary-light); align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+    .mobile-brand-icon img { width: 26px; height: 26px; object-fit: contain; }
+
     .back-btn {
       width: 32px;
       height: 32px;
@@ -181,9 +186,8 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
       justify-content: center;
       color: var(--text-muted);
       cursor: pointer;
-      transition: background 0.15s;
+      flex-shrink: 0;
     }
-    .back-btn:hover { background: #F3F4F6; color: var(--text-title); }
     
     .agent-name-input {
       font-size: 14px;
@@ -191,11 +195,11 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
       color: var(--text-title);
       background: #F3F4F6;
       border: 1px solid transparent;
-      padding: 6px 12px;
+      padding: 6px 10px;
       border-radius: 8px;
       outline: none;
-      transition: all 0.15s;
-      width: 270px;
+      width: 250px;
+      min-width: 0;
     }
     .agent-name-input:focus {
       background: white;
@@ -206,8 +210,8 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
     .header-pill {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      padding: 5px 10px;
+      gap: 5px;
+      padding: 5px 9px;
       border-radius: 6px;
       border: 1px solid var(--card-border);
       background: white;
@@ -215,6 +219,8 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
       font-weight: 500;
       color: var(--text-body);
       cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
     .header-pill-red {
       color: #DC2626;
@@ -222,12 +228,12 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
       background: #FEF2F2;
     }
 
-    .top-bar-right { display: flex; align-items: center; gap: 10px; }
+    .top-bar-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
     
     /* Ask AI Button (Orange) */
     .btn-ask-ai {
       height: 36px;
-      padding: 0 14px;
+      padding: 0 12px;
       border-radius: 8px;
       border: none;
       background: var(--accent-orange);
@@ -238,16 +244,16 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
       align-items: center;
       gap: 6px;
       cursor: pointer;
-      transition: background 0.15s;
+      white-space: nowrap;
     }
     .btn-ask-ai:hover { background: var(--accent-orange-hover); }
 
-    .test-with-label { font-size: 13px; color: var(--text-muted); margin: 0 2px; }
+    .test-with-label { font-size: 13px; color: var(--text-muted); margin: 0 2px; white-space: nowrap; }
 
     /* Action buttons (Teal) */
     .btn-teal {
       height: 36px;
-      padding: 0 13px;
+      padding: 0 12px;
       border-radius: 8px;
       border: none;
       background: var(--primary);
@@ -258,13 +264,13 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
       align-items: center;
       gap: 6px;
       cursor: pointer;
-      transition: background 0.15s;
+      white-space: nowrap;
     }
     .btn-teal:hover { background: var(--primary-hover); }
 
     .btn-outline {
       height: 36px;
-      padding: 0 13px;
+      padding: 0 12px;
       border-radius: 8px;
       border: 1px solid var(--card-border);
       background: white;
@@ -275,7 +281,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
       align-items: center;
       gap: 6px;
       cursor: pointer;
-      transition: all 0.15s;
+      white-space: nowrap;
     }
     .btn-outline:hover { background: #F9FAFB; border-color: #D1D5DB; }
 
@@ -292,7 +298,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      transition: all 0.15s;
+      white-space: nowrap;
     }
     .btn-patient-switch:hover { background: #E0E7FF; }
 
@@ -300,23 +306,34 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
     /* 3. TAB BAR                                               */
     /* ======================================================== */
     .tab-bar {
-      height: 52px;
+      min-height: 52px;
       background: #FFFFFF;
       border-bottom: 1px solid var(--card-border);
-      padding: 0 24px;
+      padding: 0 20px;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
     }
+    .tab-bar::-webkit-scrollbar { display: none; }
+
     .segmented-tabs {
       display: inline-flex;
       background: #F3F4F6;
       padding: 3px;
       border-radius: 8px;
       gap: 2px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+      flex-shrink: 0;
     }
+    .segmented-tabs::-webkit-scrollbar { display: none; }
+
     .tab-btn {
-      padding: 6px 14px;
+      padding: 6px 12px;
       border-radius: 6px;
       border: none;
       background: transparent;
@@ -327,6 +344,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
       display: flex;
       align-items: center;
       gap: 6px;
+      white-space: nowrap;
       transition: all 0.15s ease;
     }
     .tab-btn svg { width: 15px; height: 15px; }
@@ -337,7 +355,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
       box-shadow: 0 1px 3px rgba(0,0,0,0.06);
     }
 
-    .tab-bar-right { display: flex; align-items: center; gap: 12px; }
+    .tab-bar-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
     .pill-free-minutes {
       display: inline-flex;
       align-items: center;
@@ -349,6 +367,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
       font-size: 12px;
       font-weight: 600;
       color: var(--primary);
+      white-space: nowrap;
     }
     .ui-code-toggle {
       display: inline-flex;
@@ -372,7 +391,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
     /* 4. MAIN CONTENT (Two Columns, 24px gap)                  */
     /* ======================================================== */
     .content-area {
-      padding: 24px;
+      padding: 20px;
       max-width: 1400px;
       width: 100%;
       margin: 0 auto;
@@ -381,12 +400,8 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
     .two-column-grid {
       display: grid;
       grid-template-columns: 1.15fr 0.85fr;
-      gap: 24px;
+      gap: 20px;
       align-items: start;
-    }
-
-    @media (max-width: 1080px) {
-      .two-column-grid { grid-template-columns: 1fr; }
     }
 
     /* Cards */
@@ -394,15 +409,15 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
       background: var(--card-bg);
       border: 1px solid var(--card-border);
       border-radius: 14px;
-      padding: 22px 24px;
+      padding: 20px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.03);
-      margin-bottom: 24px;
+      margin-bottom: 20px;
     }
     .card-header-clean {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
     .card-title {
       font-size: 15px;
@@ -415,7 +430,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
     .card-sub {
       font-size: 12px;
       color: var(--text-muted);
-      margin-top: 3px;
+      margin-top: 2px;
     }
 
     /* Setting Tile (Light green tint with clean border) */
@@ -423,25 +438,25 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
       background: var(--primary-light);
       border: 1px solid var(--primary-border);
       border-radius: 10px;
-      padding: 14px 16px;
-      margin-bottom: 14px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
     .setting-tile-info { display: flex; flex-direction: column; gap: 2px; }
-    .setting-tile-title { font-size: 14px; font-weight: 600; color: #064E3B; display: flex; align-items: center; gap: 6px; }
-    .setting-tile-desc { font-size: 12px; color: #065F46; }
+    .setting-tile-title { font-size: 13.5px; font-weight: 600; color: #064E3B; display: flex; align-items: center; gap: 6px; }
+    .setting-tile-desc { font-size: 11.5px; color: #065F46; }
 
     /* Inputs, Selects, Textareas */
-    .form-group { margin-bottom: 16px; }
+    .form-group { margin-bottom: 14px; }
     .form-label {
       display: flex;
       justify-content: space-between;
       font-size: 13px;
       font-weight: 500;
       color: var(--text-title);
-      margin-bottom: 6px;
+      margin-bottom: 5px;
     }
     .form-label-counter { font-size: 11px; color: var(--text-muted); font-weight: 400; }
     .form-control {
@@ -461,7 +476,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
     }
     textarea.form-control {
       resize: vertical;
-      min-height: 110px;
+      min-height: 100px;
       line-height: 1.5;
     }
 
@@ -471,6 +486,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
       display: inline-block;
       width: 38px;
       height: 22px;
+      flex-shrink: 0;
     }
     .switch input { opacity: 0; width: 0; height: 0; }
     .slider {
@@ -499,12 +515,12 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
       overflow: hidden;
       display: flex;
       flex-direction: column;
-      height: 520px;
+      height: 480px;
     }
     .simulator-header {
       background: #F9FAFB;
       border-bottom: 1px solid var(--card-border);
-      padding: 12px 18px;
+      padding: 12px 16px;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -518,11 +534,11 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
     }
     .simulator-body {
       flex: 1;
-      padding: 16px;
+      padding: 14px;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 10px;
       background: #FAFAFA;
     }
     .chat-bubble {
@@ -559,7 +575,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
     .meta-grounded { background: #DCFCE7; color: #15803D; }
 
     .simulator-footer {
-      padding: 12px 16px;
+      padding: 12px 14px;
       background: #FFFFFF;
       border-top: 1px solid var(--card-border);
     }
@@ -567,9 +583,13 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
       display: flex;
       gap: 6px;
       overflow-x: auto;
-      padding-bottom: 8px;
+      padding-bottom: 6px;
       margin-bottom: 8px;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
     }
+    .quick-prompts::-webkit-scrollbar { display: none; }
+
     .quick-chip {
       font-size: 11.5px;
       font-weight: 500;
@@ -580,6 +600,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
       border-radius: 16px;
       white-space: nowrap;
       cursor: pointer;
+      flex-shrink: 0;
     }
     .quick-chip:hover { background: #E5E7EB; }
     .sim-input-row { display: flex; gap: 8px; }
@@ -589,65 +610,65 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
       background: #FFFFFF;
       border: 1px solid var(--card-border);
       border-radius: 14px;
-      padding: 18px 20px;
+      padding: 16px 18px;
     }
     .vitals-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      margin-top: 12px;
+      gap: 10px;
+      margin-top: 10px;
     }
     .vital-box {
       background: #F9FAFB;
       border: 1px solid #E5E7EB;
       border-radius: 10px;
-      padding: 10px 12px;
+      padding: 10px;
     }
     .vital-title { font-size: 11px; font-weight: 600; color: var(--text-muted); }
-    .vital-value { font-size: 22px; font-weight: 700; color: var(--text-title); margin-top: 2px; }
+    .vital-value { font-size: 20px; font-weight: 700; color: var(--text-title); margin-top: 2px; }
     .vital-sub { font-size: 11px; font-weight: 500; color: var(--primary); }
 
     .ecg-mini-canvas {
       width: 100%;
-      height: 70px;
+      height: 65px;
       background: #0F172A;
       border-radius: 8px;
-      margin-top: 12px;
+      margin-top: 10px;
       display: block;
     }
 
     /* Floating Toast Notifications */
     .toast-container {
       position: fixed;
-      top: 20px;
-      right: 20px;
+      top: 16px;
+      right: 16px;
       z-index: 9999;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 8px;
       pointer-events: none;
     }
     .toast-pill {
       pointer-events: auto;
       background: #1F2937;
       color: white;
-      padding: 12px 18px;
+      padding: 11px 16px;
       border-radius: 10px;
-      font-size: 13.5px;
+      font-size: 13px;
       font-weight: 500;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.18);
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       animation: toast-in 0.25s ease-out;
       transition: opacity 0.3s ease;
-      max-width: 400px;
+      max-width: 380px;
     }
     .toast-success { background: #065F46; border-left: 4px solid var(--primary); }
     .toast-warning { background: #78350F; border-left: 4px solid var(--accent-orange); }
     .toast-error { background: #7F1D1D; border-left: 4px solid var(--danger-red); }
     @keyframes toast-in {
-      from { transform: translateX(40px); opacity: 0; }
+      from { transform: translateX(30px); opacity: 0; }
       to { transform: translateX(0); opacity: 1; }
     }
 
@@ -661,14 +682,14 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
       align-items: center;
       justify-content: center;
       z-index: 2000;
-      padding: 20px;
+      padding: 16px;
     }
     .modal-card {
       background: white;
       border-radius: 16px;
-      max-width: 580px;
+      max-width: 560px;
       width: 100%;
-      padding: 26px;
+      padding: 22px;
       box-shadow: 0 16px 36px rgba(0,0,0,0.18);
       max-height: 90vh;
       overflow-y: auto;
@@ -680,25 +701,30 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
       align-items: center;
       justify-content: center;
       gap: 5px;
-      height: 60px;
-      margin: 20px 0;
+      height: 50px;
+      margin: 16px 0;
     }
     .wave-bar {
-      width: 5px;
-      height: 15px;
+      width: 4px;
+      height: 14px;
       background: var(--primary);
       border-radius: 4px;
       animation: wave-anim 1s ease-in-out infinite alternate;
     }
-    .wave-bar:nth-child(2) { animation-delay: 0.15s; height: 35px; }
-    .wave-bar:nth-child(3) { animation-delay: 0.3s; height: 50px; }
-    .wave-bar:nth-child(4) { animation-delay: 0.45s; height: 25px; }
-    .wave-bar:nth-child(5) { animation-delay: 0.2s; height: 45px; }
-    .wave-bar:nth-child(6) { animation-delay: 0.35s; height: 20px; }
+    .wave-bar:nth-child(2) { animation-delay: 0.15s; height: 32px; }
+    .wave-bar:nth-child(3) { animation-delay: 0.3s; height: 46px; }
+    .wave-bar:nth-child(4) { animation-delay: 0.45s; height: 22px; }
+    .wave-bar:nth-child(5) { animation-delay: 0.2s; height: 40px; }
+    .wave-bar:nth-child(6) { animation-delay: 0.35s; height: 18px; }
     @keyframes wave-anim {
       0% { transform: scaleY(0.4); }
       100% { transform: scaleY(1.3); }
     }
+
+    /* Table */
+    .clean-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .clean-table th { text-align: left; padding: 10px 12px; color: var(--text-muted); font-weight: 500; border-bottom: 1px solid var(--card-border); }
+    .clean-table td { padding: 12px; border-bottom: 1px solid #F3F4F6; color: var(--text-title); }
 
     /* ======================================================== */
     /* PATIENT SIMPLE VIEW (Elderly Accessible Mode)            */
@@ -706,49 +732,46 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
     #patient-portal-container {
       display: none;
       max-width: 800px;
-      margin: 30px auto;
-      padding: 0 20px;
+      margin: 24px auto;
+      padding: 0 16px;
       text-align: center;
     }
     .patient-hero-card {
       background: white;
       border-radius: 20px;
       border: 1px solid var(--card-border);
-      padding: 32px 20px;
+      padding: 28px 16px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.04);
       display: flex;
       flex-direction: column;
       align-items: center;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
     }
     .patient-hero-logo {
-      width: 120px;
-      height: 120px;
+      width: 110px;
+      height: 110px;
       object-fit: contain;
       filter: drop-shadow(0 4px 10px rgba(0,0,0,0.08));
     }
     .patient-big-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 18px;
-    }
-    @media (max-width: 650px) {
-      .patient-big-grid { grid-template-columns: 1fr; }
+      gap: 16px;
     }
     .patient-big-btn {
       background: white;
       border: 2px solid #E5E7EB;
       border-radius: 18px;
-      padding: 24px 16px;
+      padding: 22px 14px;
       cursor: pointer;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       transition: all 0.2s;
     }
     .patient-big-btn:hover {
-      transform: translateY(-3px);
+      transform: translateY(-2px);
       box-shadow: 0 8px 18px rgba(0,0,0,0.08);
     }
     .p-btn-talk { border-color: #3B82F6; background: #EFF6FF; }
@@ -756,10 +779,184 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
     .p-btn-heart { border-color: #F43F5E; background: #FFF1F2; }
     .p-btn-sos { border-color: #EF4444; background: #FEF2F2; }
 
-    /* Table */
-    .clean-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .clean-table th { text-align: left; padding: 10px 12px; color: var(--text-muted); font-weight: 500; border-bottom: 1px solid var(--card-border); }
-    .clean-table td { padding: 12px; border-bottom: 1px solid #F3F4F6; color: var(--text-title); }
+    /* ======================================================== */
+    /* MOBILE OPTIMIZATIONS (Screen width <= 768px)             */
+    /* ======================================================== */
+    @media (max-width: 768px) {
+      body {
+        padding-bottom: 64px; /* Room for bottom navigation bar */
+      }
+
+      /* 1. Sidebar becomes Bottom Thumb Navigation Bar */
+      .sidebar {
+        width: 100%;
+        height: 56px;
+        top: auto;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        border-right: none;
+        border-top: 1px solid var(--card-border);
+        flex-direction: row;
+        justify-content: space-around;
+        padding: 0 4px;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+        box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
+        background: #FFFFFF;
+      }
+      .sidebar-top {
+        flex-direction: row;
+        width: 100%;
+        justify-content: space-around;
+        gap: 0;
+      }
+      .sidebar-logo, .sidebar-bottom {
+        display: none; /* Logo is in top bar on mobile */
+      }
+      .nav-icons {
+        flex-direction: row;
+        width: 100%;
+        justify-content: space-around;
+        margin-top: 0;
+        gap: 0;
+      }
+      .nav-icon-btn {
+        width: 50px;
+        height: 52px;
+        border-radius: 8px;
+        padding: 4px 0;
+      }
+      .nav-icon-label {
+        display: block; /* Show text labels under icons on mobile */
+      }
+      .nav-icon-btn.active::before {
+        left: 8px; right: 8px; top: 0; bottom: auto;
+        width: auto; height: 3px;
+        border-radius: 0 0 3px 3px;
+      }
+
+      /* 2. Main Wrapper full width on mobile */
+      .app-wrapper {
+        margin-left: 0;
+        width: 100%;
+      }
+
+      /* 3. Top Header Bar on Mobile */
+      .top-bar {
+        height: auto;
+        padding: 10px 12px;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .top-bar-left {
+        width: 100%;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .mobile-brand-icon {
+        display: flex;
+      }
+      .agent-name-input {
+        flex: 1;
+        width: auto;
+        font-size: 13px;
+        padding: 6px 8px;
+      }
+      .header-pill {
+        display: none; /* Hide non-essential pills on small screens */
+      }
+      .top-bar-right {
+        width: 100%;
+        justify-content: space-between;
+        gap: 6px;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+      }
+      .top-bar-right::-webkit-scrollbar { display: none; }
+      .test-with-label { display: none; }
+      .btn-ask-ai, .btn-teal, .btn-outline, .btn-patient-switch {
+        height: 34px;
+        padding: 0 10px;
+        font-size: 12px;
+        flex-shrink: 0;
+      }
+
+      /* 4. Tab Bar on Mobile */
+      .tab-bar {
+        padding: 6px 10px;
+      }
+      .segmented-tabs {
+        width: 100%;
+      }
+      .tab-btn {
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+      .tab-bar-right {
+        display: none; /* Compact for mobile */
+      }
+
+      /* 5. Main Content Area */
+      .content-area {
+        padding: 14px 10px;
+      }
+      .two-column-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
+      .card {
+        padding: 16px 12px;
+        border-radius: 12px;
+        margin-bottom: 14px;
+      }
+
+      /* iOS Form Zoom Prevention (Min 16px for form controls on mobile) */
+      .form-control, textarea.form-control {
+        font-size: 16px;
+      }
+
+      /* Simulator Height on Mobile */
+      .simulator-container {
+        height: 400px;
+      }
+
+      /* Vitals Grid Stacking on Mobile */
+      .vitals-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      /* Modals on Mobile */
+      .modal-card {
+        padding: 18px 14px;
+        max-width: 95vw;
+        border-radius: 14px;
+      }
+
+      /* Toasts Mobile Positioning */
+      .toast-container {
+        top: 10px;
+        left: 10px;
+        right: 10px;
+      }
+      .toast-pill {
+        max-width: 100%;
+        font-size: 12.5px;
+        padding: 10px 12px;
+      }
+
+      /* Patient Portal Single Column on Mobile */
+      .patient-big-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      .patient-big-btn {
+        padding: 18px 12px;
+        min-height: 76px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -768,7 +965,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
   <div class="toast-container" id="toast-container"></div>
 
   <!-- ======================================================== -->
-  <!-- 1. LEFT SIDEBAR                                          -->
+  <!-- 1. NAVIGATION BAR (Desktop Left Sidebar / Mobile Bottom) -->
   <!-- ======================================================== -->
   <aside class="sidebar">
     <div class="sidebar-top">
@@ -779,21 +976,27 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
       <nav class="nav-icons">
         <button class="nav-icon-btn active" id="nav-assistant" title="Assistant Studio" onclick="switchTab('assistant')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+          <span class="nav-icon-label">Studio</span>
         </button>
         <button class="nav-icon-btn" id="nav-calls" title="Call Rules & Policy" onclick="switchTab('calls')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          <span class="nav-icon-label">Calls</span>
         </button>
         <button class="nav-icon-btn" id="nav-knowledge" title="FAISS Knowledge Engine" onclick="switchTab('knowledge')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          <span class="nav-icon-label">Memory</span>
         </button>
         <button class="nav-icon-btn" id="nav-postcall" title="CardioLife Vitals" onclick="switchTab('postcall')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          <span class="nav-icon-label">Vitals</span>
         </button>
         <button class="nav-icon-btn" id="nav-integrations" title="Integrations & Telegram" onclick="switchTab('integrations')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <span class="nav-icon-label">Telegram</span>
         </button>
         <button class="nav-icon-btn" id="nav-history" title="Call Logs" onclick="switchTab('history')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span class="nav-icon-label">Logs</span>
         </button>
       </nav>
     </div>
@@ -811,11 +1014,15 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
   <!-- ======================================================== -->
   <div class="app-wrapper">
 
-    <!-- 2. TOP BAR -->
+    <!-- 2. TOP HEADER BAR -->
     <header class="top-bar">
       <div class="top-bar-left">
+        <!-- Mobile Logo Icon -->
+        <div class="mobile-brand-icon" onclick="switchPortal('studio')" title="Ghajini 2.0">
+          <img src="data:image/png;base64,__LOGO_B64__" onerror="this.src='/logo.png'" alt="Ghajini">
+        </div>
         <button class="back-btn" title="Back" onclick="switchTab('assistant')">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
         </button>
         <input type="text" class="agent-name-input" value="Ghajini 2.0 (Alzheimer's Companion)">
         <div class="header-pill header-pill-red" title="SIM Direct Calling Enabled">
@@ -824,16 +1031,12 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
         <div class="header-pill" title="API Schemas & Endpoints" onclick="window.open('/docs', '_blank')">
           { } API
         </div>
-        <div class="header-pill" title="APScheduler 15s Cycle">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          15s Poll
-        </div>
       </div>
 
       <div class="top-bar-right">
         <!-- Orange Ask AI Button -->
         <button class="btn-ask-ai" onclick="openAskAIModal()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
           Ask AI
         </button>
 
@@ -841,15 +1044,15 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
 
         <!-- Teal Test Action Buttons -->
         <button class="btn-teal" onclick="openChatDrawer()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           Chat
         </button>
         <button class="btn-teal" onclick="openWebVoiceModal()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/></svg>
           Web Call
         </button>
         <button class="btn-teal" style="background: #065F46;" onclick="openPhoneCallModal()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
           Phone Call
         </button>
 
@@ -860,7 +1063,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
 
         <!-- Toggle to Patient Simple View -->
         <button class="btn-patient-switch" onclick="switchPortal('patient')">
-          👤 Patient Portal
+          👤 Patient
         </button>
       </div>
     </header>
@@ -928,10 +1131,10 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
             <div class="setting-tile">
               <div class="setting-tile-info">
                 <div class="setting-tile-title">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M8 12a4 4 0 0 1 8 0"/></svg>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M8 12a4 4 0 0 1 8 0"/></svg>
                   Aditi (Elder-care Gentle & Slow - 0.85x)
                 </div>
-                <div class="setting-tile-desc">Indian Accent &bull; Calming warm cadence &bull; Ambient Noise Suppression Active</div>
+                <div class="setting-tile-desc">Indian Accent &bull; Calming warm cadence &bull; Noise Suppression Active</div>
               </div>
               <button class="btn-outline" style="height: 32px; font-size: 12px; background: white;" onclick="testVoicePlayback()">
                 ▶ Preview Voice
@@ -1029,7 +1232,6 @@ Rules:
             </div>
 
             <div class="simulator-body" id="chat-stream">
-              <!-- Initial assistant greeting -->
               <div class="chat-bubble chat-bubble-ghajini">
                 Namaste! I am Ghajini, your friend. You are safe at home. How can I help you today?
                 <div>
@@ -1056,10 +1258,10 @@ Rules:
           </div>
 
           <!-- Card 4: CardioLife Telemetry -->
-          <div class="cardiolife-card" style="margin-top: 24px;">
+          <div class="cardiolife-card" style="margin-top: 20px;">
             <div class="card-header-clean" style="margin-bottom: 8px;">
               <div class="card-title" style="color: #BE123C;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E11D48"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#E11D48"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                 CardioLife Telemetry Feed
               </div>
               <button class="btn-outline" style="height: 28px; font-size: 11px; padding: 0 8px;" onclick="refreshVitals(true)">Refresh</button>
@@ -1084,10 +1286,10 @@ Rules:
             </div>
 
             <!-- Mini ECG Canvas -->
-            <canvas id="miniECGCanvas" class="ecg-mini-canvas" width="600" height="70"></canvas>
+            <canvas id="miniECGCanvas" class="ecg-mini-canvas" width="600" height="65"></canvas>
             
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
-              <span style="font-size: 11px; color: var(--text-muted);">Lead II &bull; Real-time Arrhythmia Guard Active</span>
+              <span style="font-size: 11px; color: var(--text-muted);">Lead II &bull; Arrhythmia Guard Active</span>
               <button class="btn-outline" style="height: 28px; font-size: 11.5px; border-color: #FECDD3; color: #E11D48;" onclick="simulateCardiacAlert()">
                 Test Cardiac Alert
               </button>
@@ -1157,40 +1359,42 @@ Rules:
           <!-- Emergency Contacts Card -->
           <div class="card">
             <div class="card-title" style="margin-bottom: 12px;">Emergency Contacts (Priority Ordered)</div>
-            <table class="clean-table">
-              <thead>
-                <tr>
-                  <th>Priority</th>
-                  <th>Name</th>
-                  <th>Relationship</th>
-                  <th>Phone Number</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><strong>#1</strong></td>
-                  <td>Priya Sharma</td>
-                  <td>Daughter & Guardian</td>
-                  <td><strong>+91 7604934874</strong></td>
-                  <td><span class="header-pill" style="color: var(--primary);">Active</span></td>
-                </tr>
-                <tr>
-                  <td>#2</td>
-                  <td>Dr. Sharma</td>
-                  <td>Geriatric Physician</td>
-                  <td>+91 9876543212</td>
-                  <td><span class="header-pill">Standby</span></td>
-                </tr>
-                <tr>
-                  <td>#3</td>
-                  <td>Arun Kumar</td>
-                  <td>Neighbor</td>
-                  <td>+91 9876543213</td>
-                  <td><span class="header-pill">Standby</span></td>
-                </tr>
-              </tbody>
-            </table>
+            <div style="overflow-x: auto;">
+              <table class="clean-table">
+                <thead>
+                  <tr>
+                    <th>Priority</th>
+                    <th>Name</th>
+                    <th>Relationship</th>
+                    <th>Phone Number</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>#1</strong></td>
+                    <td>Priya Sharma</td>
+                    <td>Daughter & Guardian</td>
+                    <td><strong>+91 7604934874</strong></td>
+                    <td><span class="header-pill" style="color: var(--primary);">Active</span></td>
+                  </tr>
+                  <tr>
+                    <td>#2</td>
+                    <td>Dr. Sharma</td>
+                    <td>Geriatric Physician</td>
+                    <td>+91 9876543212</td>
+                    <td><span class="header-pill">Standby</span></td>
+                  </tr>
+                  <tr>
+                    <td>#3</td>
+                    <td>Arun Kumar</td>
+                    <td>Neighbor</td>
+                    <td>+91 9876543213</td>
+                    <td><span class="header-pill">Standby</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
@@ -1317,7 +1521,7 @@ Rules:
         <div class="col-left">
           <div class="card">
             <div class="card-title" style="margin-bottom: 12px;">Caregiver Telegram Briefing Formatter</div>
-            <div style="background: #F0FDF4; border: 1px solid #BBF7D0; padding: 16px; border-radius: 10px; font-size: 13px; line-height: 1.6; color: #166534;">
+            <div style="background: #F0FDF4; border: 1px solid #BBF7D0; padding: 14px; border-radius: 10px; font-size: 13px; line-height: 1.6; color: #166534;">
               <strong>Telegram Message Template:</strong><br>
               🚨 <strong>Emergency Call:</strong> Patient has requested to speak with you.<br>
               ⏰ <strong>Time:</strong> Today at 07:54 PM<br>
@@ -1355,23 +1559,25 @@ Rules:
           <button class="btn-outline" style="height: 30px; font-size: 12px;" onclick="loadRecentCalls()">Refresh Logs</button>
         </div>
 
-        <table class="clean-table" id="calls-table">
-          <thead>
-            <tr>
-              <th>Timestamp</th>
-              <th>Contact</th>
-              <th>Phone</th>
-              <th>Reason</th>
-              <th>Source</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody id="calls-table-body">
-            <tr>
-              <td colspan="6" style="text-align: center; color: var(--text-muted);">Loading recent call records...</td>
-            </tr>
-          </tbody>
-        </table>
+        <div style="overflow-x: auto;">
+          <table class="clean-table" id="calls-table">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Contact</th>
+                <th>Phone</th>
+                <th>Reason</th>
+                <th>Source</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="calls-table-body">
+              <tr>
+                <td colspan="6" style="text-align: center; color: var(--text-muted);">Loading recent call records...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </main>
 
@@ -1381,13 +1587,13 @@ Rules:
     <section id="patient-portal-container">
       <div class="patient-hero-card">
         <img src="data:image/png;base64,__LOGO_B64__" onerror="this.src='/logo.png'" alt="Ghajini Robot Friend" class="patient-hero-logo">
-        <div style="font-size: 28px; font-weight: 800; color: #1F2937; margin-top: 14px;" id="p-greeting-text">
+        <div style="font-size: 26px; font-weight: 800; color: #1F2937; margin-top: 14px;" id="p-greeting-text">
           नमस्ते! मैं गजिनी हूँ।
         </div>
-        <div style="font-size: 17px; color: var(--text-muted); margin-top: 6px;" id="p-subgreeting-text">
+        <div style="font-size: 16px; color: var(--text-muted); margin-top: 6px;" id="p-subgreeting-text">
           आप अपने घर में बिल्कुल सुरक्षित हैं। मैं आपके साथ हूँ।
         </div>
-        <button class="btn-outline" style="margin-top: 16px; font-size: 12.5px;" onclick="switchPortal('studio')">
+        <button class="btn-outline" style="margin-top: 16px; font-size: 13px;" onclick="switchPortal('studio')">
           ← Back to Caregiver Studio
         </button>
       </div>
@@ -1395,30 +1601,30 @@ Rules:
       <div class="patient-big-grid">
         <!-- 1. Talk to Ghajini -->
         <div class="patient-big-btn p-btn-talk" onclick="patientOpenTalk()">
-          <div style="font-size: 44px;">🤖</div>
-          <div style="font-size: 20px; font-weight: 800; color: #1F2937;">गजिनी से बात करें</div>
-          <div style="font-size: 14px; color: var(--text-muted);">मुझसे कोई भी सवाल पूछें</div>
+          <div style="font-size: 40px;">🤖</div>
+          <div style="font-size: 19px; font-weight: 800; color: #1F2937;">गजिनी से बात करें</div>
+          <div style="font-size: 13.5px; color: var(--text-muted);">मुझसे कोई भी सवाल पूछें</div>
         </div>
 
         <!-- 2. Call Priya -->
         <div class="patient-big-btn p-btn-call" onclick="openPhoneCallModal()">
-          <div style="font-size: 44px;">📞</div>
-          <div style="font-size: 20px; font-weight: 800; color: #065F46;">प्रिया को फोन करें</div>
-          <div style="font-size: 14px; color: #047857;">+91 7604934874 (तुरंत कॉल)</div>
+          <div style="font-size: 40px;">📞</div>
+          <div style="font-size: 19px; font-weight: 800; color: #065F46;">प्रिया को फोन करें</div>
+          <div style="font-size: 13.5px; color: #047857;">+91 7604934874 (तुरंत कॉल)</div>
         </div>
 
         <!-- 3. Heart & Pulse -->
         <div class="patient-big-btn p-btn-heart" onclick="patientOpenHeart()">
-          <div style="font-size: 44px;">❤️</div>
-          <div style="font-size: 20px; font-weight: 800; color: #9F1239;">मेरा दिल और नब्ज़</div>
-          <div style="font-size: 14px; color: #BE123C;" id="p-heart-status-sub">74 BPM &bull; बिल्कुल सामान्य</div>
+          <div style="font-size: 40px;">❤️</div>
+          <div style="font-size: 19px; font-weight: 800; color: #9F1239;">मेरा दिल और नब्ज़</div>
+          <div style="font-size: 13.5px; color: #BE123C;" id="p-heart-status-sub">74 BPM &bull; बिल्कुल सामान्य</div>
         </div>
 
         <!-- 4. SOS Help -->
         <div class="patient-big-btn p-btn-sos" onclick="patientTriggerSOS()">
-          <div style="font-size: 44px;">🚨</div>
-          <div style="font-size: 20px; font-weight: 800; color: #991B1B;">मदद चाहिए / SOS</div>
-          <div style="font-size: 14px; color: #B91C1C;">परिवार को तुरंत संदेश भेजें</div>
+          <div style="font-size: 40px;">🚨</div>
+          <div style="font-size: 19px; font-weight: 800; color: #991B1B;">मदद चाहिए / SOS</div>
+          <div style="font-size: 13.5px; color: #B91C1C;">परिवार को तुरंत संदेश भेजें</div>
         </div>
       </div>
     </section>
@@ -1426,17 +1632,17 @@ Rules:
   </div>
 
   <!-- ======================================================== -->
-  <!-- INTERACTIVE MODALS (Replacing All Blocking Alerts)        -->
+  <!-- INTERACTIVE MODALS                                       -->
   <!-- ======================================================== -->
 
   <!-- 1. In-Browser Voice Call Simulator Modal -->
   <div class="modal-overlay" id="modal-web-call">
-    <div class="modal-card" style="text-align: center; max-width: 460px;">
-      <div style="width: 60px; height: 60px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 26px;">
+    <div class="modal-card" style="text-align: center; max-width: 440px;">
+      <div style="width: 56px; height: 56px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; font-size: 24px;">
         📞
       </div>
-      <div style="font-size: 18px; font-weight: 700; color: var(--text-title);">Ghajini Voice Companion</div>
-      <div style="font-size: 13px; color: var(--primary); font-weight: 600; margin-top: 4px;" id="call-timer-text">Connected &bull; 00:08</div>
+      <div style="font-size: 17px; font-weight: 700; color: var(--text-title);">Ghajini Voice Companion</div>
+      <div style="font-size: 12.5px; color: var(--primary); font-weight: 600; margin-top: 3px;" id="call-timer-text">Connected &bull; 00:08</div>
 
       <!-- Animated Voice Waveform -->
       <div class="voice-wave-box">
@@ -1448,18 +1654,18 @@ Rules:
         <div class="wave-bar"></div>
       </div>
 
-      <div style="background: #F9FAFB; border: 1px solid var(--card-border); border-radius: 10px; padding: 14px; font-size: 14px; line-height: 1.5; color: var(--text-title); min-height: 60px;" id="call-voice-transcript">
+      <div style="background: #F9FAFB; border: 1px solid var(--card-border); border-radius: 10px; padding: 12px; font-size: 13.5px; line-height: 1.5; color: var(--text-title); min-height: 55px;" id="call-voice-transcript">
         "Namaste! I am Ghajini. How are you feeling today?"
       </div>
 
-      <div style="display: flex; justify-content: center; gap: 12px; margin-top: 24px;">
+      <div style="display: flex; justify-content: center; gap: 12px; margin-top: 20px;">
         <button class="btn-outline" style="border-radius: 50%; width: 44px; height: 44px; padding: 0; justify-content: center;" title="Mute" onclick="showToast('Microphone toggled', 'info')">
           🎤
         </button>
         <button class="btn-outline" style="border-radius: 50%; width: 44px; height: 44px; padding: 0; justify-content: center;" title="Speaker" onclick="testVoicePlayback()">
           🔊
         </button>
-        <button class="btn-teal" style="background: var(--danger-red); border-radius: 24px; padding: 0 20px; font-weight: 600;" onclick="closeWebVoiceModal()">
+        <button class="btn-teal" style="background: var(--danger-red); border-radius: 24px; padding: 0 18px; font-weight: 600;" onclick="closeWebVoiceModal()">
           End Call
         </button>
       </div>
@@ -1469,24 +1675,24 @@ Rules:
   <!-- 2. SIM Phone Call Dialog -->
   <div class="modal-overlay" id="modal-phone-call">
     <div class="modal-card">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
         <div class="card-title" style="color: #065F46;">
           <span>📞</span> Placing SIM Call to Caregiver
         </div>
         <button class="btn-outline" style="height: 28px; padding: 0 8px; font-size: 12px;" onclick="closePhoneCallModal()">✕</button>
       </div>
 
-      <div style="background: #F0FDF4; border: 1.5px solid #BBF7D0; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
-        <div style="font-size: 15px; font-weight: 700; color: #166534;">Recipient: Priya Sharma (Daughter)</div>
-        <div style="font-size: 20px; font-weight: 800; color: #064E3B; margin-top: 4px;">+91 7604934874</div>
-        <div style="font-size: 12px; color: #15803D; margin-top: 6px;">Zero Twilio &bull; Direct Phone SIM Telephony &bull; Free Carrier Minutes</div>
+      <div style="background: #F0FDF4; border: 1.5px solid #BBF7D0; border-radius: 12px; padding: 14px; margin-bottom: 14px;">
+        <div style="font-size: 14.5px; font-weight: 700; color: #166534;">Recipient: Priya Sharma (Daughter)</div>
+        <div style="font-size: 19px; font-weight: 800; color: #064E3B; margin-top: 3px;">+91 7604934874</div>
+        <div style="font-size: 11.5px; color: #15803D; margin-top: 5px;">Zero Twilio &bull; Direct Phone SIM Telephony &bull; Free Carrier Minutes</div>
       </div>
 
-      <div id="phone-call-status-box" style="margin-bottom: 16px; font-size: 13.5px; line-height: 1.5; color: var(--text-title);">
+      <div id="phone-call-status-box" style="margin-bottom: 14px; font-size: 13px; line-height: 1.5; color: var(--text-title);">
         Connecting to safety router...
       </div>
 
-      <div style="display: flex; gap: 10px; justify-content: flex-end;">
+      <div style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;">
         <button class="btn-outline" onclick="copyCaregiverNumber()">📋 Copy Number</button>
         <button class="btn-teal" id="btn-dial-now" onclick="dialCaregiverDirect()">📞 Open Dialer (tel:)</button>
         <button class="btn-outline" onclick="closePhoneCallModal()">Dismiss</button>
@@ -1499,15 +1705,15 @@ Rules:
     <div class="modal-card">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
         <div class="card-title" style="color: var(--accent-orange);">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
           Ask AI: Prompt Tuning Assistant
         </div>
         <button class="btn-outline" style="height: 28px; padding: 0 8px; font-size: 12px;" onclick="closeAskAIModal()">✕</button>
       </div>
-      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">
+      <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 12px;">
         Select an AI tuning preset or enter custom clinical guidance for dementia care:
       </p>
-      <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px;">
+      <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px;">
         <button class="quick-chip" onclick="applyAIPreset('calm')">Gentle De-escalation Preset</button>
         <button class="quick-chip" onclick="applyAIPreset('bilingual')">Hindi/English Bilingual Preset</button>
         <button class="quick-chip" onclick="applyAIPreset('repetition')">Patience with Repetition</button>
@@ -1515,7 +1721,7 @@ Rules:
       <div class="form-group">
         <textarea id="ai-suggestion-input" class="form-control" rows="3" placeholder="Describe instructions or prompt tweaks..."></textarea>
       </div>
-      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
         <button class="btn-outline" onclick="closeAskAIModal()">Cancel</button>
         <button class="btn-ask-ai" onclick="generateAIPromptSuggestion()">Apply Optimized Prompt</button>
       </div>
@@ -1525,21 +1731,21 @@ Rules:
   <!-- 4. Deploy Status Modal -->
   <div class="modal-overlay" id="modal-deploy">
     <div class="modal-card">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
         <div class="card-title" style="color: var(--primary);">Production Deployment</div>
         <button class="btn-outline" style="height: 28px; padding: 0 8px; font-size: 12px;" onclick="closeDeployModal()">✕</button>
       </div>
-      <div class="setting-tile" style="margin-bottom: 16px;">
+      <div class="setting-tile" style="margin-bottom: 14px;">
         <div class="setting-tile-info">
           <div class="setting-tile-title">Vercel Serverless (Production)</div>
           <div class="setting-tile-desc">https://ghajini-2-0.vercel.app</div>
         </div>
         <span class="header-pill" style="color: var(--primary);">Live & Active</span>
       </div>
-      <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 16px;">
-        Your project is connected to GitHub <code>Madhu07-offl/Ghajini-2.O</code>. Every push automatically rebuilds and deploys to Vercel within 10 seconds.
+      <p style="font-size: 12.5px; color: var(--text-muted); line-height: 1.5; margin-bottom: 14px;">
+        Connected to GitHub <code>Madhu07-offl/Ghajini-2.O</code>. Every push automatically rebuilds and deploys to Vercel within 10 seconds.
       </p>
-      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
         <button class="btn-outline" onclick="closeDeployModal()">Close</button>
         <button class="btn-teal" onclick="window.open('https://ghajini-2-0.vercel.app', '_blank')">Open Vercel App ↗</button>
       </div>
@@ -1553,7 +1759,7 @@ Rules:
         <div class="card-title">Caregiver Information</div>
         <button class="btn-outline" style="height: 28px; padding: 0 8px; font-size: 12px;" onclick="closeCaregiverModal()">✕</button>
       </div>
-      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+      <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 14px;">
         Profile used for automatic call forwarding and emergency escalations:
       </p>
       <div class="form-group">
@@ -1568,7 +1774,7 @@ Rules:
         <label class="form-label">Relationship to Patient</label>
         <input type="text" id="cfg-rel" class="form-control" value="Daughter & Primary Guardian">
       </div>
-      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+      <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;">
         <button class="btn-outline" onclick="closeCaregiverModal()">Cancel</button>
         <button class="btn-teal" onclick="saveCaregiverModal()">Save Information</button>
       </div>
