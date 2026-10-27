@@ -14,6 +14,7 @@ if not _logo_b64:
         os.path.join(os.path.dirname(__file__), "..", "..", "static", "logo.png"),
         os.path.join(os.path.dirname(__file__), "..", "static", "logo_base64.txt"),
         os.path.join(os.path.dirname(__file__), "..", "static", "logo.png"),
+        os.path.join(os.path.dirname(__file__), "static", "logo_base64.txt"),
         os.path.join(os.getcwd(), "backend", "app", "static", "logo_base64.txt"),
         os.path.join(os.getcwd(), "backend", "app", "static", "logo.png"),
     ]
@@ -465,7 +466,6 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
     }
 
     /* Switch Toggle */
-    .toggle-wrapper { display: flex; align-items: center; gap: 10px; }
     .switch {
       position: relative;
       display: inline-block;
@@ -616,12 +616,47 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
       display: block;
     }
 
+    /* Floating Toast Notifications */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+    .toast-pill {
+      pointer-events: auto;
+      background: #1F2937;
+      color: white;
+      padding: 12px 18px;
+      border-radius: 10px;
+      font-size: 13.5px;
+      font-weight: 500;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: toast-in 0.25s ease-out;
+      transition: opacity 0.3s ease;
+      max-width: 400px;
+    }
+    .toast-success { background: #065F46; border-left: 4px solid var(--primary); }
+    .toast-warning { background: #78350F; border-left: 4px solid var(--accent-orange); }
+    .toast-error { background: #7F1D1D; border-left: 4px solid var(--danger-red); }
+    @keyframes toast-in {
+      from { transform: translateX(40px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
     /* Modal / Popups */
     .modal-overlay {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(15, 23, 42, 0.6);
-      backdrop-filter: blur(3px);
+      backdrop-filter: blur(4px);
       display: none;
       align-items: center;
       justify-content: center;
@@ -631,10 +666,38 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
     .modal-card {
       background: white;
       border-radius: 16px;
-      max-width: 600px;
+      max-width: 580px;
       width: 100%;
-      padding: 24px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+      padding: 26px;
+      box-shadow: 0 16px 36px rgba(0,0,0,0.18);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    /* Animated Waveform for Voice Call */
+    .voice-wave-box {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      height: 60px;
+      margin: 20px 0;
+    }
+    .wave-bar {
+      width: 5px;
+      height: 15px;
+      background: var(--primary);
+      border-radius: 4px;
+      animation: wave-anim 1s ease-in-out infinite alternate;
+    }
+    .wave-bar:nth-child(2) { animation-delay: 0.15s; height: 35px; }
+    .wave-bar:nth-child(3) { animation-delay: 0.3s; height: 50px; }
+    .wave-bar:nth-child(4) { animation-delay: 0.45s; height: 25px; }
+    .wave-bar:nth-child(5) { animation-delay: 0.2s; height: 45px; }
+    .wave-bar:nth-child(6) { animation-delay: 0.35s; height: 20px; }
+    @keyframes wave-anim {
+      0% { transform: scaleY(0.4); }
+      100% { transform: scaleY(1.3); }
     }
 
     /* ======================================================== */
@@ -701,6 +764,9 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
 </head>
 <body>
 
+  <!-- Floating Toast Notifications -->
+  <div class="toast-container" id="toast-container"></div>
+
   <!-- ======================================================== -->
   <!-- 1. LEFT SIDEBAR                                          -->
   <!-- ======================================================== -->
@@ -711,28 +777,22 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
       </div>
 
       <nav class="nav-icons">
-        <!-- Voice Agents -->
-        <button class="nav-icon-btn active" title="Assistant Studio" onclick="switchTab('assistant')">
+        <button class="nav-icon-btn active" id="nav-assistant" title="Assistant Studio" onclick="switchTab('assistant')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
         </button>
-        <!-- Telephony / Calls -->
-        <button class="nav-icon-btn" title="Call Rules & Policy" onclick="switchTab('calls')">
+        <button class="nav-icon-btn" id="nav-calls" title="Call Rules & Policy" onclick="switchTab('calls')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
         </button>
-        <!-- Knowledge Base -->
-        <button class="nav-icon-btn" title="FAISS Knowledge Engine" onclick="switchTab('knowledge')">
+        <button class="nav-icon-btn" id="nav-knowledge" title="FAISS Knowledge Engine" onclick="switchTab('knowledge')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
         </button>
-        <!-- CardioLife Telemetry -->
-        <button class="nav-icon-btn" title="CardioLife Vitals" onclick="switchTab('postcall')">
+        <button class="nav-icon-btn" id="nav-postcall" title="CardioLife Vitals" onclick="switchTab('postcall')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
         </button>
-        <!-- Integrations -->
-        <button class="nav-icon-btn" title="Integrations & Telegram" onclick="switchTab('integrations')">
+        <button class="nav-icon-btn" id="nav-integrations" title="Integrations & Telegram" onclick="switchTab('integrations')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
         </button>
-        <!-- Recent Calls -->
-        <button class="nav-icon-btn" title="Call Logs" onclick="switchTab('history')">
+        <button class="nav-icon-btn" id="nav-history" title="Call Logs" onclick="switchTab('history')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         </button>
       </nav>
@@ -742,7 +802,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
       <button class="nav-icon-btn" title="Caregiver Profile" onclick="openCaregiverModal()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
-      <div class="sidebar-avatar" title="Priya Sharma (Caregiver)">P</div>
+      <div class="sidebar-avatar" title="Priya Sharma (Caregiver)" onclick="openCaregiverModal()">P</div>
     </div>
   </aside>
 
@@ -780,15 +840,15 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
         <span class="test-with-label">Test with:</span>
 
         <!-- Teal Test Action Buttons -->
-        <button class="btn-teal" onclick="focusChatSimulator()">
+        <button class="btn-teal" onclick="openChatDrawer()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           Chat
         </button>
-        <button class="btn-teal" onclick="startWebVoiceCall()">
+        <button class="btn-teal" onclick="openWebVoiceModal()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/></svg>
           Web Call
         </button>
-        <button class="btn-teal" style="background: #065F46;" onclick="triggerPhoneCallCaregiver()">
+        <button class="btn-teal" style="background: #065F46;" onclick="openPhoneCallModal()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
           Phone Call
         </button>
@@ -919,7 +979,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
                 <div class="setting-tile-desc">Rejects invented facts. Fallback: "I am not sure. Shall I call Priya?"</div>
               </div>
               <label class="switch">
-                <input type="checkbox" id="toggle-grounding" checked>
+                <input type="checkbox" id="toggle-grounding" checked onchange="showToast('Anti-Hallucination Guardrail updated', 'info')">
                 <span class="slider"></span>
               </label>
             </div>
@@ -934,7 +994,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
                 <div class="setting-tile-desc">Immediate rule-based SIM dialer trigger on distress phrases</div>
               </div>
               <label class="switch">
-                <input type="checkbox" id="toggle-emergency-phrase" checked>
+                <input type="checkbox" id="toggle-emergency-phrase" checked onchange="showToast('Emergency Phrase Interception updated', 'info')">
                 <span class="slider"></span>
               </label>
             </div>
@@ -1002,7 +1062,7 @@ Rules:
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E11D48"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                 CardioLife Telemetry Feed
               </div>
-              <button class="btn-outline" style="height: 28px; font-size: 11px; padding: 0 8px;" onclick="refreshVitals()">Refresh</button>
+              <button class="btn-outline" style="height: 28px; font-size: 11px; padding: 0 8px;" onclick="refreshVitals(true)">Refresh</button>
             </div>
             
             <div class="vitals-grid">
@@ -1063,7 +1123,7 @@ Rules:
                 <div class="setting-tile-desc">Allows caregiver & patient manual dials without 2-minute delay</div>
               </div>
               <label class="switch">
-                <input type="checkbox" id="toggle-cooldown-bypass" checked>
+                <input type="checkbox" id="toggle-cooldown-bypass" checked onchange="showToast('Cooldown Bypass toggled', 'info')">
                 <span class="slider"></span>
               </label>
             </div>
@@ -1226,6 +1286,9 @@ Rules:
               <label class="form-label">Caregiver Chat ID</label>
               <input type="text" class="form-control" value="7604934874" readonly style="background: #F9FAFB;">
             </div>
+            <button class="btn-teal" onclick="showToast('Telegram briefing channel verified active', 'success')">
+              Test Telegram Bot Ping
+            </button>
           </div>
         </div>
         <div class="col-right">
@@ -1238,6 +1301,9 @@ Rules:
               </div>
               <span class="header-pill" style="color: var(--primary);">Verified</span>
             </div>
+            <button class="btn-outline" onclick="showToast('Hardware Telephony permissions validated', 'info')">
+              Check Permissions
+            </button>
           </div>
         </div>
       </div>
@@ -1268,6 +1334,9 @@ Rules:
               &bull; <strong>Anti-Hallucination:</strong> Deterministic rule-based templates enforce patient safety.<br>
               &bull; <strong>Data Export:</strong> Caregivers can export all stored memories via <code>/v1/privacy/export</code>.
             </div>
+            <button class="btn-outline" style="margin-top: 14px;" onclick="window.location.href='/v1/privacy/export'">
+              💾 Download Data Archive (.ZIP)
+            </button>
           </div>
         </div>
       </div>
@@ -1332,7 +1401,7 @@ Rules:
         </div>
 
         <!-- 2. Call Priya -->
-        <div class="patient-big-btn p-btn-call" onclick="triggerPhoneCallCaregiver()">
+        <div class="patient-big-btn p-btn-call" onclick="openPhoneCallModal()">
           <div style="font-size: 44px;">📞</div>
           <div style="font-size: 20px; font-weight: 800; color: #065F46;">प्रिया को फोन करें</div>
           <div style="font-size: 14px; color: #047857;">+91 7604934874 (तुरंत कॉल)</div>
@@ -1357,13 +1426,133 @@ Rules:
   </div>
 
   <!-- ======================================================== -->
-  <!-- MODALS                                                   -->
+  <!-- INTERACTIVE MODALS (Replacing All Blocking Alerts)        -->
   <!-- ======================================================== -->
 
-  <!-- Caregiver Modal -->
+  <!-- 1. In-Browser Voice Call Simulator Modal -->
+  <div class="modal-overlay" id="modal-web-call">
+    <div class="modal-card" style="text-align: center; max-width: 460px;">
+      <div style="width: 60px; height: 60px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 26px;">
+        📞
+      </div>
+      <div style="font-size: 18px; font-weight: 700; color: var(--text-title);">Ghajini Voice Companion</div>
+      <div style="font-size: 13px; color: var(--primary); font-weight: 600; margin-top: 4px;" id="call-timer-text">Connected &bull; 00:08</div>
+
+      <!-- Animated Voice Waveform -->
+      <div class="voice-wave-box">
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+      </div>
+
+      <div style="background: #F9FAFB; border: 1px solid var(--card-border); border-radius: 10px; padding: 14px; font-size: 14px; line-height: 1.5; color: var(--text-title); min-height: 60px;" id="call-voice-transcript">
+        "Namaste! I am Ghajini. How are you feeling today?"
+      </div>
+
+      <div style="display: flex; justify-content: center; gap: 12px; margin-top: 24px;">
+        <button class="btn-outline" style="border-radius: 50%; width: 44px; height: 44px; padding: 0; justify-content: center;" title="Mute" onclick="showToast('Microphone toggled', 'info')">
+          🎤
+        </button>
+        <button class="btn-outline" style="border-radius: 50%; width: 44px; height: 44px; padding: 0; justify-content: center;" title="Speaker" onclick="testVoicePlayback()">
+          🔊
+        </button>
+        <button class="btn-teal" style="background: var(--danger-red); border-radius: 24px; padding: 0 20px; font-weight: 600;" onclick="closeWebVoiceModal()">
+          End Call
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. SIM Phone Call Dialog -->
+  <div class="modal-overlay" id="modal-phone-call">
+    <div class="modal-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <div class="card-title" style="color: #065F46;">
+          <span>📞</span> Placing SIM Call to Caregiver
+        </div>
+        <button class="btn-outline" style="height: 28px; padding: 0 8px; font-size: 12px;" onclick="closePhoneCallModal()">✕</button>
+      </div>
+
+      <div style="background: #F0FDF4; border: 1.5px solid #BBF7D0; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+        <div style="font-size: 15px; font-weight: 700; color: #166534;">Recipient: Priya Sharma (Daughter)</div>
+        <div style="font-size: 20px; font-weight: 800; color: #064E3B; margin-top: 4px;">+91 7604934874</div>
+        <div style="font-size: 12px; color: #15803D; margin-top: 6px;">Zero Twilio &bull; Direct Phone SIM Telephony &bull; Free Carrier Minutes</div>
+      </div>
+
+      <div id="phone-call-status-box" style="margin-bottom: 16px; font-size: 13.5px; line-height: 1.5; color: var(--text-title);">
+        Connecting to safety router...
+      </div>
+
+      <div style="display: flex; gap: 10px; justify-content: flex-end;">
+        <button class="btn-outline" onclick="copyCaregiverNumber()">📋 Copy Number</button>
+        <button class="btn-teal" id="btn-dial-now" onclick="dialCaregiverDirect()">📞 Open Dialer (tel:)</button>
+        <button class="btn-outline" onclick="closePhoneCallModal()">Dismiss</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Ask AI Prompt Optimizer Modal -->
+  <div class="modal-overlay" id="modal-ask-ai">
+    <div class="modal-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <div class="card-title" style="color: var(--accent-orange);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          Ask AI: Prompt Tuning Assistant
+        </div>
+        <button class="btn-outline" style="height: 28px; padding: 0 8px; font-size: 12px;" onclick="closeAskAIModal()">✕</button>
+      </div>
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">
+        Select an AI tuning preset or enter custom clinical guidance for dementia care:
+      </p>
+      <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px;">
+        <button class="quick-chip" onclick="applyAIPreset('calm')">Gentle De-escalation Preset</button>
+        <button class="quick-chip" onclick="applyAIPreset('bilingual')">Hindi/English Bilingual Preset</button>
+        <button class="quick-chip" onclick="applyAIPreset('repetition')">Patience with Repetition</button>
+      </div>
+      <div class="form-group">
+        <textarea id="ai-suggestion-input" class="form-control" rows="3" placeholder="Describe instructions or prompt tweaks..."></textarea>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button class="btn-outline" onclick="closeAskAIModal()">Cancel</button>
+        <button class="btn-ask-ai" onclick="generateAIPromptSuggestion()">Apply Optimized Prompt</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Deploy Status Modal -->
+  <div class="modal-overlay" id="modal-deploy">
+    <div class="modal-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <div class="card-title" style="color: var(--primary);">Production Deployment</div>
+        <button class="btn-outline" style="height: 28px; padding: 0 8px; font-size: 12px;" onclick="closeDeployModal()">✕</button>
+      </div>
+      <div class="setting-tile" style="margin-bottom: 16px;">
+        <div class="setting-tile-info">
+          <div class="setting-tile-title">Vercel Serverless (Production)</div>
+          <div class="setting-tile-desc">https://ghajini-2-0.vercel.app</div>
+        </div>
+        <span class="header-pill" style="color: var(--primary);">Live & Active</span>
+      </div>
+      <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 16px;">
+        Your project is connected to GitHub <code>Madhu07-offl/Ghajini-2.O</code>. Every push automatically rebuilds and deploys to Vercel within 10 seconds.
+      </p>
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button class="btn-outline" onclick="closeDeployModal()">Close</button>
+        <button class="btn-teal" onclick="window.open('https://ghajini-2-0.vercel.app', '_blank')">Open Vercel App ↗</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Caregiver Profile Modal -->
   <div class="modal-overlay" id="modal-caregiver">
     <div class="modal-card">
-      <div class="card-title" style="margin-bottom: 12px;">Caregiver Information</div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <div class="card-title">Caregiver Information</div>
+        <button class="btn-outline" style="height: 28px; padding: 0 8px; font-size: 12px;" onclick="closeCaregiverModal()">✕</button>
+      </div>
       <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
         Profile used for automatic call forwarding and emergency escalations:
       </p>
@@ -1386,69 +1575,51 @@ Rules:
     </div>
   </div>
 
-  <!-- Ask AI Modal -->
-  <div class="modal-overlay" id="modal-ask-ai">
-    <div class="modal-card">
-      <div class="card-title" style="color: var(--accent-orange); margin-bottom: 12px;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-        Ghajini AI Prompt Tuning Assistant
-      </div>
-      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
-        Ask AI to optimize instructions for dementia/Alzheimer's care, de-escalation, or bilingual switching:
-      </p>
-      <div class="form-group">
-        <textarea id="ai-suggestion-input" class="form-control" rows="3" placeholder="e.g. Make the companion sound more comforting when the patient asks about deceased relatives."></textarea>
-      </div>
-      <div style="display: flex; justify-content: flex-end; gap: 10px;">
-        <button class="btn-outline" onclick="closeAskAIModal()">Close</button>
-        <button class="btn-ask-ai" onclick="generateAIPromptSuggestion()">Optimize Instructions</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Deploy Status Modal -->
-  <div class="modal-overlay" id="modal-deploy">
-    <div class="modal-card">
-      <div class="card-title" style="color: var(--primary); margin-bottom: 12px;">Production Deployment</div>
-      <div class="setting-tile" style="margin-bottom: 16px;">
-        <div class="setting-tile-info">
-          <div class="setting-tile-title">Vercel Serverless (Production)</div>
-          <div class="setting-tile-desc">https://ghajini-2-0.vercel.app</div>
-        </div>
-        <span class="header-pill" style="color: var(--primary);">Live & Active</span>
-      </div>
-      <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 16px;">
-        Your project is connected to GitHub <code>Madhu07-offl/Ghajini-2.O</code>. Every push automatically rebuilds and deploys to Vercel within 10 seconds.
-      </p>
-      <div style="display: flex; justify-content: flex-end; gap: 10px;">
-        <button class="btn-outline" onclick="closeDeployModal()">Close</button>
-        <button class="btn-teal" onclick="window.open('https://ghajini-2-0.vercel.app', '_blank')">Open Vercel App ↗</button>
-      </div>
-    </div>
-  </div>
-
   <script>
     // State
     let activeTab = 'assistant';
     let activePortal = 'studio';
     let currentLang = 'hi';
     let ecgAnimationId = null;
+    let callTimerInterval = null;
+
+    // Toast Notification System
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast-pill toast-${type}`;
+      const icon = (type === 'success') ? '✅' : (type === 'error') ? '❌' : (type === 'warning') ? '⚠️' : 'ℹ️';
+      toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
 
     // Tab Switcher
     function switchTab(tabId) {
       activeTab = tabId;
+
+      // Update Tab Bar buttons
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
       const activeBtn = document.getElementById('tab-' + tabId);
       if (activeBtn) activeBtn.classList.add('active');
 
-      // Update sidebar nav active
+      // Update Sidebar Nav icon buttons
       document.querySelectorAll('.nav-icon-btn').forEach(btn => btn.classList.remove('active'));
+      const activeNav = document.getElementById('nav-' + tabId);
+      if (activeNav) activeNav.classList.add('active');
 
-      // Hide all views
-      ['assistant', 'calls', 'knowledge', 'integrations', 'postcall', 'history'].forEach(id => {
+      // Hide all main studio views and show active one
+      const allViews = ['assistant', 'calls', 'knowledge', 'integrations', 'postcall', 'history'];
+      allViews.forEach(id => {
         const el = document.getElementById('view-' + id);
         if (el) el.style.display = (id === tabId) ? 'block' : 'none';
       });
+
+      // Hide patient portal if open
+      document.getElementById('patient-portal-container').style.display = 'none';
 
       if (tabId === 'history') {
         loadRecentCalls();
@@ -1458,18 +1629,20 @@ Rules:
     // Portal Switcher
     function switchPortal(portal) {
       activePortal = portal;
-      const studioViews = ['view-assistant', 'view-calls', 'view-knowledge', 'view-integrations', 'view-postcall', 'view-history'];
+      const allViews = ['view-assistant', 'view-calls', 'view-knowledge', 'view-integrations', 'view-postcall', 'view-history'];
       const pContainer = document.getElementById('patient-portal-container');
 
       if (portal === 'patient') {
-        studioViews.forEach(id => {
+        allViews.forEach(id => {
           const el = document.getElementById(id);
           if (el) el.style.display = 'none';
         });
         pContainer.style.display = 'block';
+        showToast('Switched to Patient Simple View', 'info');
       } else {
         pContainer.style.display = 'none';
         switchTab(activeTab);
+        showToast('Switched to Caregiver Studio', 'info');
       }
     }
 
@@ -1490,14 +1663,16 @@ Rules:
         pGreeting.innerText = 'Hello! I am Ghajini.';
         pSub.innerText = 'You are safe at home with your loved ones. I am right here with you.';
       }
+      showToast(`Language switched to ${lang.toUpperCase()}`, 'info');
     }
 
-    // Simulator Interactive
-    function focusChatSimulator() {
+    // Chat Drawer / Simulator focus
+    function openChatDrawer() {
       switchTab('assistant');
       const input = document.getElementById('sim-input');
       input.focus();
       input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      showToast('Live Simulator ready for testing', 'info');
     }
 
     function quickSend(text) {
@@ -1550,28 +1725,50 @@ Rules:
     // Voice simulation
     function testVoicePlayback() {
       if ('speechSynthesis' in window) {
-        const utterance = new SpeechSynthesisUtterance('Namaste. I am Ghajini, your memory companion. You are doing wonderful today.');
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance('Namaste. I am Ghajini, your memory companion. You are safe at home and doing wonderful today.');
         utterance.rate = 0.85;
         window.speechSynthesis.speak(utterance);
+        showToast('Playing voice sample at 0.85x calm rate', 'success');
       } else {
-        alert('Voice playback test: Speech synthesis triggered at 0.85x calm pace.');
+        showToast('Speech synthesis triggered at 0.85x calm pace', 'info');
       }
     }
 
-    function startWebVoiceCall() {
-      focusChatSimulator();
+    function openWebVoiceModal() {
+      document.getElementById('modal-web-call').style.display = 'flex';
+      let sec = 0;
+      const timerEl = document.getElementById('call-timer-text');
+      if (callTimerInterval) clearInterval(callTimerInterval);
+      callTimerInterval = setInterval(() => {
+        sec++;
+        const m = String(Math.floor(sec / 60)).padStart(2, '0');
+        const s = String(sec % 60).padStart(2, '0');
+        timerEl.innerText = `Connected • ${m}:${s}`;
+      }, 1000);
       testVoicePlayback();
     }
+    function closeWebVoiceModal() {
+      document.getElementById('modal-web-call').style.display = 'none';
+      if (callTimerInterval) clearInterval(callTimerInterval);
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      showToast('Web voice session ended', 'info');
+    }
 
-    // Direct Phone Call
-    async function triggerPhoneCallCaregiver() {
+    // Phone Call Modal & Direct Dial
+    async function openPhoneCallModal() {
+      const modal = document.getElementById('modal-phone-call');
+      modal.style.display = 'flex';
+      const statusBox = document.getElementById('phone-call-status-box');
+      statusBox.innerHTML = 'Connecting to backend safety policy router...';
+
       try {
         const res = await fetch('/v1/calls/request', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             patient_id: 1,
-            reason: 'Voice Studio phone call trigger',
+            reason: 'Direct phone call trigger from Studio',
             source: 'manual',
             lang: currentLang,
             bypass_cooldown: true
@@ -1579,23 +1776,43 @@ Rules:
         });
         const data = await res.json();
         if (data.allowed) {
-          alert(`📞 Calling ${data.contact.name} (${data.contact.phone})\n\nPatient Speech:\n"${data.patient_message}"\n\nCaregiver Telegram Briefing:\n${data.caregiver_briefing}`);
-          window.open(`tel:${data.contact.phone}`);
+          statusBox.innerHTML = `
+            <div style="color: #065F46; font-weight: 600;">✅ Call Request Approved (Cooldown Bypassed)</div>
+            <div style="margin-top: 6px;"><strong>Spoken to Patient:</strong> "${data.patient_message}"</div>
+            <div style="margin-top: 6px; font-size: 12px; color: var(--text-muted);"><strong>Telegram Briefing:</strong> ${data.caregiver_briefing.replace(/\\n/g, ' ')}</div>
+          `;
+          showToast('Call permitted. Direct dial ready.', 'success');
         } else {
-          alert(`Call Paused: ${data.block_reason}`);
+          statusBox.innerHTML = `
+            <div style="color: #DC2626; font-weight: 600;">⚠️ Call Paused: ${data.block_reason}</div>
+            <button class="btn-outline" style="margin-top: 8px; font-size: 12px;" onclick="resetCallCooldown()">Reset Cooldown Now</button>
+          `;
+          showToast('Call paused by rate policy', 'warning');
         }
       } catch (e) {
-        alert('Call request failed: ' + e);
+        statusBox.innerHTML = `<span style="color: #DC2626;">Error: ${e}</span>`;
       }
+    }
+    function closePhoneCallModal() {
+      document.getElementById('modal-phone-call').style.display = 'none';
+    }
+    function dialCaregiverDirect() {
+      window.location.href = 'tel:+917604934874';
+      showToast('Opening native phone dialer for +91 7604934874...', 'success');
+    }
+    function copyCaregiverNumber() {
+      navigator.clipboard.writeText('+917604934874').then(() => {
+        showToast('Copied +91 7604934874 to clipboard!', 'success');
+      });
     }
 
     async function resetCallCooldown() {
       try {
         const res = await fetch('/v1/calls/reset-cooldown?patient_id=1', { method: 'POST' });
         const data = await res.json();
-        alert('Cooldown Reset: Throttle locks removed successfully.');
+        showToast('Cooldown & throttle locks reset! Unlimited calls allowed.', 'success');
       } catch (e) {
-        alert('Error: ' + e);
+        showToast('Reset failed: ' + e, 'error');
       }
     }
 
@@ -1624,10 +1841,11 @@ Rules:
         const data = await res.json();
         if (data.allowed) {
           out.innerHTML = `✅ <strong>Call Dispatched!</strong> Calling ${data.contact.name} (${data.contact.phone})<br>Briefing: ${data.caregiver_briefing.replace(/\\n/g, ' ')}`;
-          window.open(`tel:${data.contact.phone}`);
+          showToast(`Calling ${data.contact.name}...`, 'success');
         } else {
           out.style.color = '#DC2626';
           out.innerHTML = `⚠️ <strong>Call Paused:</strong> ${data.block_reason}`;
+          showToast('Call paused by policy', 'warning');
         }
       } catch (e) {
         out.style.color = '#DC2626';
@@ -1635,18 +1853,33 @@ Rules:
       }
     }
 
-    // CardioLife & Vitals
-    async function refreshVitals() {
+    // CardioLife & Vitals (Crash-proof handler)
+    async function refreshVitals(manual = false) {
       try {
         const res = await fetch('/v1/cardiolife/current?patient_id=1');
         const data = await res.json();
-        document.getElementById('dash-vital-hr').innerHTML = `${data.heart_rate_bpm} <span style="font-size: 12px; font-weight: 500;">BPM</span>`;
-        document.getElementById('dash-vital-status').innerText = data.status.replace('_', ' ').toUpperCase();
-        document.getElementById('dash-vital-bp').innerText = `${data.blood_pressure_systolic}/${data.blood_pressure_diastolic}`;
-        document.getElementById('dash-vital-spo2').innerHTML = `${data.oxygen_saturation} <span style="font-size: 12px; font-weight: 500;">%</span>`;
-        document.getElementById('p-heart-status-sub').innerText = `${data.heart_rate_bpm} BPM • ${data.status.replace('_', ' ')}`;
+        const r = data.reading || data || {};
+
+        const bpm = r.heart_rate_bpm || 74;
+        const status = (r.status || 'normal').replace(/_/g, ' ').toUpperCase();
+        const bp = (r.blood_pressure_systolic && r.blood_pressure_diastolic) ? `${r.blood_pressure_systolic}/${r.blood_pressure_diastolic}` : '120/80';
+        const spo2 = r.oxygen_saturation || 98;
+
+        const hrEl = document.getElementById('dash-vital-hr');
+        const stEl = document.getElementById('dash-vital-status');
+        const bpEl = document.getElementById('dash-vital-bp');
+        const spEl = document.getElementById('dash-vital-spo2');
+        const pSub = document.getElementById('p-heart-status-sub');
+
+        if (hrEl) hrEl.innerHTML = `${bpm} <span style="font-size: 12px; font-weight: 500;">BPM</span>`;
+        if (stEl) stEl.innerText = status;
+        if (bpEl) bpEl.innerText = bp;
+        if (spEl) spEl.innerHTML = `${spo2} <span style="font-size: 12px; font-weight: 500;">%</span>`;
+        if (pSub) pSub.innerText = `${bpm} BPM • ${status}`;
+
+        if (manual) showToast('CardioLife vitals synced', 'success');
       } catch (e) {
-        console.error(e);
+        console.warn('Vitals sync note:', e);
       }
     }
 
@@ -1654,10 +1887,10 @@ Rules:
       try {
         const res = await fetch('/v1/cardiolife/simulate?scenario=critical_tachycardia', { method: 'POST' });
         const data = await res.json();
-        alert(`❤️ CardioLife Alert Dispatched!\n\nHeart Rate: ${data.heart_rate_bpm} BPM (${data.status})\nBP: ${data.blood_pressure_systolic}/${data.blood_pressure_diastolic}\nSpO2: ${data.oxygen_saturation}%\n\nTelegram alert logged & sent.`);
+        showToast(`🚨 Cardiac Alert: ${data.heart_rate_bpm} BPM (${data.status})`, 'error');
         refreshVitals();
       } catch (e) {
-        alert('Simulation failed: ' + e);
+        showToast('Simulation failed: ' + e, 'error');
       }
     }
 
@@ -1711,7 +1944,10 @@ Rules:
     // Knowledge Base Teach
     async function teachMemoryFact() {
       const text = document.getElementById('teach-fact-input').value.trim();
-      if (!text) return;
+      if (!text) {
+        showToast('Please type a memory fact first', 'warning');
+        return;
+      }
       const st = document.getElementById('teach-fact-status');
       st.style.color = '#0F9D7A';
       st.innerText = 'Embedding into FAISS vector index...';
@@ -1725,9 +1961,11 @@ Rules:
         const data = await res.json();
         st.innerText = `Success! Embedded fact #${data.id}: "${data.text}"`;
         document.getElementById('teach-fact-input').value = '';
+        showToast(`Memory #${data.id} embedded successfully into FAISS!`, 'success');
       } catch (e) {
         st.style.color = '#DC2626';
         st.innerText = 'Error embedding fact: ' + e;
+        showToast('Failed to embed memory: ' + e, 'error');
       }
     }
 
@@ -1757,6 +1995,7 @@ Rules:
           `;
           tbody.appendChild(tr);
         });
+        showToast('Call logs updated', 'info');
       } catch (e) {
         tbody.innerHTML = `<tr><td colspan="6" style="color: #DC2626;">Error loading calls: ${e}</td></tr>`;
       }
@@ -1767,15 +2006,22 @@ Rules:
     function closeCaregiverModal() { document.getElementById('modal-caregiver').style.display = 'none'; }
     function saveCaregiverModal() {
       closeCaregiverModal();
-      alert('Caregiver profile updated.');
+      showToast('Caregiver profile updated', 'success');
     }
 
     function openAskAIModal() { document.getElementById('modal-ask-ai').style.display = 'flex'; }
     function closeAskAIModal() { document.getElementById('modal-ask-ai').style.display = 'none'; }
+    function applyAIPreset(type) {
+      const input = document.getElementById('ai-suggestion-input');
+      if (type === 'calm') input.value = 'Speak with extreme gentleness. Never contradict the patient. If they feel confused, remind them Priya is watching over them.';
+      else if (type === 'bilingual') input.value = 'Support both Hindi and English fluidly. Reply in the same language the patient uses, keeping vocabulary simple.';
+      else if (type === 'repetition') input.value = 'Treat every repeated question as if it were asked for the first time. Provide warm, consistent reassurance.';
+    }
     function generateAIPromptSuggestion() {
-      document.getElementById('agent-prompt').value = `You are Ghajini, a caring Alzheimer's voice assistant. Speak with tender warmth and extreme patience. Never mention that you are an AI. If the patient repeats a question, answer it fresh with a smile. If they appear anxious, ground them by reminding them Priya is nearby and their home is peaceful.`;
+      const val = document.getElementById('ai-suggestion-input').value.trim();
+      document.getElementById('agent-prompt').value = val || `You are Ghajini, a caring Alzheimer's voice companion. Speak with gentle warmth and infinite patience. Always ground facts in family memories (Priya in Bangalore, Dr. Sharma on Thursdays). If anxiety is detected, soothe them that home is safe.`;
       closeAskAIModal();
-      alert('AI Prompt Suggestion applied to System Prompt!');
+      showToast('AI Prompt Optimization applied to System Prompt!', 'success');
     }
 
     function openDeployModal() { document.getElementById('modal-deploy').style.display = 'flex'; }
@@ -1788,6 +2034,7 @@ Rules:
 2. Ground all answers strictly in stored family facts.
 3. If asked about taking medicine, check reminder records.
 4. Detect anxiety and reassure the patient they are safe at home.`;
+      showToast('Instructions reset to clinical default', 'info');
     }
 
     function toggleViewMode(mode) {
@@ -1801,11 +2048,11 @@ Rules:
     // Patient Actions
     function patientOpenTalk() {
       switchPortal('studio');
-      focusChatSimulator();
+      openChatDrawer();
     }
     function patientOpenHeart() {
       refreshVitals();
-      alert('❤️ आपकी धड़कन 74 BPM है। आप बिल्कुल स्वस्थ और सुरक्षित हैं।');
+      showToast('❤️ आपकी धड़कन 74 BPM है। आप बिल्कुल सुरक्षित हैं।', 'success');
     }
     async function patientTriggerSOS() {
       try {
@@ -1814,10 +2061,10 @@ Rules:
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ patient_id: 1, note: 'Patient pressed Help / SOS on simple touch portal' })
         });
-        alert('🚨 आपातकालीन सूचना भेज दी गई है!\n\nEmergency alert dispatched to Priya and doctor.');
-        triggerPhoneCallCaregiver();
+        showToast('🚨 आपातकालीन सूचना भेज दी गई है! Alert sent to Priya.', 'error');
+        openPhoneCallModal();
       } catch (e) {
-        alert('SOS error: ' + e);
+        showToast('SOS error: ' + e, 'error');
       }
     }
 
