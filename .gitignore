@@ -8,6 +8,8 @@ backend/.venv/
 .venv/
 .uv-python/
 *.db
+*.db-shm
+*.db-wal
 data/*.json
 backend/data/*.json
 data/uploads/*

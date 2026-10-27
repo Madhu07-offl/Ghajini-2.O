@@ -19,6 +19,7 @@ class Patient(Base):
     alerts = orm_relationship("Alert", back_populates="patient", cascade="all, delete-orphan")
     audit_logs = orm_relationship("AuditLog", back_populates="patient", cascade="all, delete-orphan")
     places = orm_relationship("Place", back_populates="patient", cascade="all, delete-orphan")
+    vitals = orm_relationship("VitalsReading", back_populates="patient", cascade="all, delete-orphan")
 
 
 class Person(Base):
@@ -151,3 +152,20 @@ class Place(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     patient = orm_relationship("Patient", back_populates="places")
+
+
+class VitalsReading(Base):
+    __tablename__ = "vitals_readings"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    patient_id = Column(Integer, ForeignKey("patients.id", ondelete="CASCADE"), nullable=False, default=1, index=True)
+    heart_rate_bpm = Column(Integer, nullable=False, default=72)
+    blood_pressure_systolic = Column(Integer, nullable=True, default=120)
+    blood_pressure_diastolic = Column(Integer, nullable=True, default=80)
+    oxygen_saturation = Column(Integer, nullable=True, default=98)
+    hrv_ms = Column(Integer, nullable=True, default=45)
+    status = Column(String(50), default="normal", nullable=False)  # normal, elevated, low, critical_high, critical_low, arrhythmia
+    notes = Column(Text, nullable=True)
+    recorded_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    patient = orm_relationship("Patient", back_populates="vitals")

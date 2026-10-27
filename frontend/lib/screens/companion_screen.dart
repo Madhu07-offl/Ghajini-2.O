@@ -395,6 +395,24 @@ class _CompanionScreenState extends ConsumerState<CompanionScreen> {
                       ),
                     ),
 
+                    // CardioLife quick action card if vitals intent was detected
+                    if (_lastActions.contains('show_cardiolife')) ...[
+                      const SizedBox(height: 12),
+                      ElevatedButton.icon(
+                        onPressed: () => context.push('/cardiolife'),
+                        icon: const Icon(Icons.favorite, color: Colors.white, size: 22),
+                        label: const Text(
+                          'Open CardioLife Care / हृदय स्वास्थ्य',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: GhajiniTheme.primaryOrange,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          minimumSize: const Size.fromHeight(52),
+                        ),
+                      ),
+                    ],
+
                     // Photo card if person or place was mentioned
                     if (_lastPersonCard != null) ...[
                       const SizedBox(height: 16),

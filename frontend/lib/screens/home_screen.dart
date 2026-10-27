@@ -308,6 +308,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               },
             ),
             ListTile(
+              leading: const Icon(Icons.favorite, color: GhajiniTheme.primaryOrange),
+              title: const Text('Open CardioLife Care (Vitals Monitor)', style: TextStyle(fontWeight: FontWeight.bold)),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                context.push('/cardiolife');
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.warning, color: GhajiniTheme.emergencyRed),
               title: const Text('Trigger SOS Alert', style: TextStyle(fontWeight: FontWeight.bold)),
               onTap: () {

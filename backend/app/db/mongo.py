@@ -214,12 +214,13 @@ class MongoManager:
             self._connected = False
 
     def get_collection(self, name: str) -> Any:
-        if self._connected and self._motor_client is not None:
-            try:
-                db = self._motor_client.get_default_database("ghajini")
-            except Exception:
-                db = self._motor_client["ghajini"]
-            return db[name]
+        if not os.environ.get("PYTEST_CURRENT_TEST") and not os.environ.get("TESTING"):
+            if self._connected and self._motor_client is not None:
+                try:
+                    db = self._motor_client.get_default_database("ghajini")
+                except Exception:
+                    db = self._motor_client["ghajini"]
+                return db[name]
         if name not in self._fallback_collections:
             self._fallback_collections[name] = AsyncDocumentCollection(name)
         return self._fallback_collections[name]

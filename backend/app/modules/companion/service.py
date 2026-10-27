@@ -8,7 +8,7 @@ import httpx
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.db.models import Alert, AuditLog, Memory, Person, Place, Reminder, ReminderLog
+from app.db.models import Alert, AuditLog, Memory, Person, Place, Reminder, ReminderLog, VitalsReading
 from app.db.mongo import mongo_manager
 from app.db.session import SessionLocal
 from app.modules.alerts.service import notify_caregivers
@@ -141,6 +141,11 @@ CALL_FAMILY_PATTERNS = [
     r"\bphone karo\b", r"\bphone milao\b", r"\bcall karo\b", r"\bbaat karni hai\b"
 ]
 
+VITALS_PATTERNS = [
+    r"\bheart\b", r"\bbpm\b", r"\bpulse\b", r"\bdil\b", r"\bdhadkan\b",
+    r"\bblood pressure\b", r"\bbp\b", r"\bvitals\b", r"\becg\b", r"\bcardio\b"
+]
+
 SMALLTALK_WORDS = [
     "hello", "hi", "hey", "good morning", "good evening", "how are you",
     "thank you", "thanks", "namaste", "sat sri akal", "kaise ho",
@@ -170,6 +175,11 @@ def classify_intent(text: str) -> str:
     for p in MEDICINE_PATTERNS:
         if re.search(p, lower):
             return "medicine"
+
+    # 4. Cardio & Vitals
+    for p in VITALS_PATTERNS:
+        if re.search(p, lower):
+            return "vitals"
 
     # 4. Where / When
     for p in WHERE_WHEN_PATTERNS:
@@ -415,6 +425,55 @@ class CompanionService:
                     "mood": mood,
                     "actions": [],
                     "sources": ["Greeting library"],
+                    "person": None,
+                }
+
+            # -------------------------------------------------------------
+            # Handle Intent 4: CardioLife / Vitals
+            # -------------------------------------------------------------
+            if intent == "vitals":
+                latest_vitals = (
+                    db.query(VitalsReading)
+                    .filter(VitalsReading.patient_id == patient_id)
+                    .order_by(VitalsReading.recorded_at.desc())
+                    .first()
+                )
+                bpm = latest_vitals.heart_rate_bpm if latest_vitals else 72
+                sys_p = latest_vitals.blood_pressure_systolic if latest_vitals else 120
+                dia_p = latest_vitals.blood_pressure_diastolic if latest_vitals else 80
+                stat = latest_vitals.status if latest_vitals else "normal"
+
+                if target_lang == "hi":
+                    reply = f"आपकी हृदय गति {bpm} BPM है और रक्तचाप {sys_p}/{dia_p} है।" + (" सब सामान्य और ठीक है।" if stat == "normal" else " कृपया थोड़ा आराम करें।")
+                elif target_lang == "pa":
+                    reply = f"ਤੁਹਾਡੇ ਦਿਲ ਦੀ ਧੜਕਣ {bpm} BPM ਹੈ ਅਤੇ ਬਲੱਡ ਪ੍ਰੈਸ਼ਰ {sys_p}/{dia_p} ਹੈ।" + (" ਸਭ ਕੁਝ ਸਧਾਰਨ ਹੈ।" if stat == "normal" else " ਕਿਰਪਾ ਕਰਕੇ ਆਰਾਮ ਕਰੋ।")
+                else:
+                    reply = f"Your heart rate is {bpm} BPM and blood pressure is {sys_p}/{dia_p}." + (" Everything looks healthy." if stat == "normal" else f" Status: {stat.replace('_', ' ').title()}.")
+
+                conv_doc = {
+                    "patient_id": patient_id,
+                    "text": norm_text,
+                    "reply": reply,
+                    "lang": target_lang,
+                    "intent": "vitals",
+                    "grounded": True,
+                    "mood": mood,
+                    "actions": ["show_cardiolife"],
+                    "sources": [f"CardioLife telemetry: {bpm} BPM, BP {sys_p}/{dia_p}"],
+                    "person": None,
+                    "marked_wrong": False,
+                    "timestamp": datetime.utcnow().isoformat(),
+                }
+                coll = mongo_manager.get_collection("conversations")
+                await coll.insert_one(conv_doc)
+                return {
+                    "reply": reply,
+                    "lang": target_lang,
+                    "intent": "vitals",
+                    "grounded": True,
+                    "mood": mood,
+                    "actions": ["show_cardiolife"],
+                    "sources": [f"CardioLife telemetry: {bpm} BPM, BP {sys_p}/{dia_p}"],
                     "person": None,
                 }
 

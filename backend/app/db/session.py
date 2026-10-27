@@ -5,7 +5,7 @@ from app.core.config import settings
 
 connect_args = {}
 if settings.DATABASE_URL.startswith("sqlite"):
-    connect_args = {"check_same_thread": False}
+    connect_args = {"check_same_thread": False, "timeout": 20}
 
 engine = create_engine(settings.DATABASE_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -81,6 +81,23 @@ def init_db() -> None:
                 arun.phone = "+919876543211"
             arun.is_emergency_contact = True
             arun.priority = 2
+
+        # Ensure initial baseline CardioLife vitals exist
+        from datetime import datetime
+        vital = db.query(models.VitalsReading).filter(models.VitalsReading.patient_id == settings.DEFAULT_PATIENT_ID).first()
+        if not vital:
+            vital = models.VitalsReading(
+                patient_id=settings.DEFAULT_PATIENT_ID,
+                heart_rate_bpm=72,
+                blood_pressure_systolic=120,
+                blood_pressure_diastolic=80,
+                oxygen_saturation=98,
+                hrv_ms=48,
+                status="normal",
+                notes="Resting baseline reading",
+                recorded_at=datetime.utcnow(),
+            )
+            db.add(vital)
         db.commit()
     finally:
         db.close()

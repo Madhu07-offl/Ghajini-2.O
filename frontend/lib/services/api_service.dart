@@ -514,4 +514,77 @@ class ApiService {
     );
     return res.data as Map<String, dynamic>;
   }
+
+  /// CardioLife: Fetch current vitals summary with multilingual descriptions
+  Future<Map<String, dynamic>> getCurrentVitals({int patientId = 1}) async {
+    final res = await _dio.get(
+      '/cardiolife/current',
+      queryParameters: {'patient_id': patientId},
+    );
+    return res.data as Map<String, dynamic>;
+  }
+
+  /// CardioLife: Fetch historical vitals readings
+  Future<List<dynamic>> getVitalsHistory({
+    int patientId = 1,
+    int limit = 20,
+  }) async {
+    final res = await _dio.get(
+      '/cardiolife/history',
+      queryParameters: {'patient_id': patientId, 'limit': limit},
+    );
+    return res.data as List<dynamic>;
+  }
+
+  /// CardioLife: Fetch live mathematical ECG waveform data points
+  Future<Map<String, dynamic>> getLiveEcg({
+    int bpm = 72,
+    int samples = 120,
+  }) async {
+    final res = await _dio.get(
+      '/cardiolife/ecg-live',
+      queryParameters: {'bpm': bpm, 'samples': samples},
+    );
+    return res.data as Map<String, dynamic>;
+  }
+
+  /// CardioLife: Record a telemetry vitals reading
+  Future<Map<String, dynamic>> recordVitals({
+    required int bpm,
+    int? systolic,
+    int? diastolic,
+    int? oxygen,
+    int? hrv,
+    String? notes,
+    int patientId = 1,
+  }) async {
+    final res = await _dio.post(
+      '/cardiolife/readings',
+      data: {
+        'patient_id': patientId,
+        'heart_rate_bpm': bpm,
+        'blood_pressure_systolic': systolic ?? 120,
+        'blood_pressure_diastolic': diastolic ?? 80,
+        'oxygen_saturation': oxygen ?? 98,
+        'hrv_ms': hrv ?? 45,
+        'notes': notes,
+      },
+    );
+    return res.data as Map<String, dynamic>;
+  }
+
+  /// CardioLife: Simulate a cardiac condition scenario for demo
+  Future<Map<String, dynamic>> simulateVitals(
+    String scenario, {
+    int patientId = 1,
+  }) async {
+    final res = await _dio.post(
+      '/cardiolife/simulate',
+      queryParameters: {
+        'scenario': scenario,
+        'patient_id': patientId,
+      },
+    );
+    return res.data as Map<String, dynamic>;
+  }
 }

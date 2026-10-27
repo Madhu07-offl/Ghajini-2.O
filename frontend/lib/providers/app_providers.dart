@@ -52,3 +52,21 @@ final dailySummaryProvider = FutureProvider.autoDispose<DailySummary>((ref) asyn
   final api = ref.watch(apiServiceProvider);
   return api.getDailySummary();
 });
+
+/// CardioLife: Current heart rate & vitals telemetry summary
+final currentVitalsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
+  final api = ref.watch(apiServiceProvider);
+  return api.getCurrentVitals();
+});
+
+/// CardioLife: Historical vitals recordings
+final vitalsHistoryProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
+  final api = ref.watch(apiServiceProvider);
+  return api.getVitalsHistory();
+});
+
+/// CardioLife: Live mathematical ECG waveform data points
+final liveEcgWaveformProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, int>((ref, bpm) async {
+  final api = ref.watch(apiServiceProvider);
+  return api.getLiveEcg(bpm: bpm, samples: 100);
+});

@@ -142,6 +142,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         <button class="btn-pill" onclick="setCompPrompt('What do I do today?')">What do I do today?</button>
         <button class="btn-pill" onclick="setCompPrompt('Madad karo main gir gayi')">🚨 Help / Emergency (Hindi)</button>
         <button class="btn-pill" onclick="setCompPrompt('Call my daughter')">📞 Call Family</button>
+        <button class="btn-pill" onclick="setCompPrompt('How is my heart rate and vitals?')">❤️ Heart & Vitals</button>
       </div>
 
       <div class="test-box">
@@ -216,6 +217,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         <button class="btn btn-success" onclick="triggerReminder()">Trigger Reminder Now</button>
         <button class="btn btn-danger" onclick="triggerSOS()">Trigger SOS Alert</button>
         <button class="btn btn-primary" style="background: #166534;" onclick="triggerCallCaregiver()">Call Caregiver (+91 7604934874)</button>
+        <button class="btn btn-outline" style="border-color: #EF4444; color: #EF4444;" onclick="simulateCardiacAlert()">Simulate Cardiac Alert</button>
         <a href="/v1/privacy/export" class="btn btn-outline" style="text-decoration: none; justify-content: center;">Export Personal Data (ZIP)</a>
       </div>
     </div>
@@ -438,6 +440,17 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         }
       } catch (e) {
         alert('Call request failed: ' + e);
+      }
+    }
+
+    async function simulateCardiacAlert() {
+      try {
+        const res = await fetch('/v1/cardiolife/simulate?scenario=critical_tachycardia', { method: 'POST' });
+        const data = await res.json();
+        alert(`❤️ CardioLife Cardiac Alert Dispatched!\n\nHeart Rate: ${data.heart_rate_bpm} BPM (${data.status})\nSystolic/Diastolic: ${data.blood_pressure_systolic}/${data.blood_pressure_diastolic}\nSpO2: ${data.oxygen_saturation}%\n\nCaregiver alert notification logged in DB & dispatched!`);
+        loadDashboard();
+      } catch (e) {
+        alert('Simulation failed: ' + e);
       }
     }
 

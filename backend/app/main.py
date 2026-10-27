@@ -15,6 +15,7 @@ from app.db.mongo import HAS_MOTOR, AsyncIOMotorClient, mongo_manager
 from app.db.session import SessionLocal, init_db
 from app.modules.alerts.router import router as alerts_router
 from app.modules.calls.router import router as calls_router
+from app.modules.cardiolife.router import router as cardiolife_router
 from app.modules.chat.llm_client import ollama_client
 from app.modules.chat.router import router as chat_router
 from app.modules.companion.router import router as companion_router
@@ -69,7 +70,8 @@ async def lifespan(app: FastAPI):
     await mongo_manager.init()
     preload_indices()
     voice_transcriber.load()
-    start_scheduler()
+    if not os.environ.get("PYTEST_CURRENT_TEST") and not os.environ.get("TESTING"):
+        start_scheduler()
 
     # Pre-warm Ollama if not running in pytest or test mode
     if not os.environ.get("PYTEST_CURRENT_TEST") and not os.environ.get("TESTING"):
@@ -162,13 +164,14 @@ async def health_check():
 
     # 3. Ollama check
     ollama_status = "unavailable"
-    try:
-        async with httpx.AsyncClient(timeout=1.0) as client:
-            res = await client.get(f"{settings.OLLAMA_BASE_URL}/api/tags")
-            if res.status_code == 200:
-                ollama_status = "available"
-    except Exception:
-        ollama_status = "unavailable"
+    if not os.environ.get("PYTEST_CURRENT_TEST") and not os.environ.get("TESTING"):
+        try:
+            async with httpx.AsyncClient(timeout=1.0) as client:
+                res = await client.get(f"{settings.OLLAMA_BASE_URL}/api/tags")
+                if res.status_code == 200:
+                    ollama_status = "available"
+        except Exception:
+            ollama_status = "unavailable"
 
     # 4. Model statuses
     face_status = "loaded" if face_engine.app is not None or face_engine.index is not None else "fallback"
@@ -209,4 +212,5 @@ app.include_router(privacy_router, prefix=f"{v1_prefix}/privacy", tags=["privacy
 app.include_router(dashboard_router, prefix=f"{v1_prefix}/dashboard", tags=["dashboard"])
 app.include_router(companion_router, prefix=f"{v1_prefix}/companion", tags=["companion"])
 app.include_router(calls_router, prefix=f"{v1_prefix}/calls", tags=["calls"])
+app.include_router(cardiolife_router, prefix=f"{v1_prefix}/cardiolife", tags=["cardiolife"])
 app.include_router(demo_router, prefix=f"{v1_prefix}/demo", tags=["demo"])

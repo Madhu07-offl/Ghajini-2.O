@@ -238,6 +238,10 @@ async def test_6_telegram_failure_does_not_block():
 
 def test_7_api_call_request_and_result_escalation():
     """Test full endpoint POST /v1/calls/request and POST /v1/calls/{id}/result."""
+    import asyncio
+    coll = mongo_manager.get_collection("calls")
+    asyncio.run(coll.delete_many({"patient_id": 1}))
+
     unique_reason = f"Test emergency alert {datetime.utcnow().timestamp()}"
     res = client.post(
         "/v1/calls/request",

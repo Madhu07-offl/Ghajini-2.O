@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 import 'package:ghajini_app/screens/add_person_screen.dart';
 import 'package:ghajini_app/screens/ask_screen.dart';
+import 'package:ghajini_app/screens/cardiolife_screen.dart';
 import 'package:ghajini_app/screens/caregiver_screen.dart';
 import 'package:ghajini_app/screens/companion_screen.dart';
 import 'package:ghajini_app/screens/dashboard_screen.dart';
@@ -42,6 +43,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/privacy',
       builder: (context, state) => const PrivacyScreen(),
+    ),
+    GoRoute(
+      path: '/cardiolife',
+      builder: (context, state) => const CardioLifeScreen(),
     ),
   ],
 );

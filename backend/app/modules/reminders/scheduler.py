@@ -11,7 +11,7 @@ from app.modules.alerts.service import notify_caregivers
 
 logger = logging.getLogger(__name__)
 
-scheduler = BackgroundScheduler()
+scheduler = BackgroundScheduler(timezone="UTC")
 
 
 def send_push_notification_stub(patient_id: int, title: str, message: str) -> None:
