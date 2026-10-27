@@ -208,8 +208,11 @@ class MongoManager:
 
     def get_collection(self, name: str) -> Any:
         if self._connected and self._motor_client is not None:
-            db_name = "ghajini"
-            return self._motor_client[db_name][name]
+            try:
+                db = self._motor_client.get_default_database("ghajini")
+            except Exception:
+                db = self._motor_client["ghajini"]
+            return db[name]
         if name not in self._fallback_collections:
             self._fallback_collections[name] = AsyncDocumentCollection(name)
         return self._fallback_collections[name]
