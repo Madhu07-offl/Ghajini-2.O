@@ -2,23 +2,35 @@ import base64
 import os
 from fastapi.responses import HTMLResponse
 
-STATIC_DIR = os.path.join(os.path.dirname(__file__), "..", "static")
-LOGO_FILE = os.path.join(STATIC_DIR, "logo.png")
-LOGO_B64_FILE = os.path.join(STATIC_DIR, "logo_base64.txt")
-
 _logo_b64 = ""
-if os.path.exists(LOGO_B64_FILE):
-    try:
-        with open(LOGO_B64_FILE, "r") as f:
-            _logo_b64 = f.read().strip()
-    except Exception:
-        pass
-elif os.path.exists(LOGO_FILE):
-    try:
-        with open(LOGO_FILE, "rb") as f:
-            _logo_b64 = base64.b64encode(f.read()).decode("utf-8")
-    except Exception:
-        pass
+try:
+    from app.static.logo_data import LOGO_BASE64 as _logo_b64
+except Exception:
+    _logo_b64 = ""
+
+if not _logo_b64:
+    candidate_paths = [
+        os.path.join(os.path.dirname(__file__), "..", "..", "static", "logo_base64.txt"),
+        os.path.join(os.path.dirname(__file__), "..", "..", "static", "logo.png"),
+        os.path.join(os.path.dirname(__file__), "..", "static", "logo_base64.txt"),
+        os.path.join(os.path.dirname(__file__), "..", "static", "logo.png"),
+        os.path.join(os.path.dirname(__file__), "static", "logo_base64.txt"),
+        os.path.join(os.getcwd(), "backend", "app", "static", "logo_base64.txt"),
+        os.path.join(os.getcwd(), "backend", "app", "static", "logo.png"),
+    ]
+    for p in candidate_paths:
+        if os.path.exists(p):
+            try:
+                if p.endswith(".txt"):
+                    with open(p, "r", encoding="utf-8") as f:
+                        _logo_b64 = f.read().strip()
+                elif p.endswith(".png"):
+                    with open(p, "rb") as f:
+                        _logo_b64 = base64.b64encode(f.read()).decode("utf-8")
+                if _logo_b64:
+                    break
+            except Exception:
+                pass
 
 DASHBOARD_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
@@ -333,7 +345,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
   <!-- Top Header with Logo and Portal Switcher -->
   <header>
     <div class="header-left">
-      <img src="data:image/png;base64,__LOGO_B64__" alt="Ghajini 2.0" class="brand-logo" onclick="switchPortal('patient')">
+      <img src="data:image/png;base64,__LOGO_B64__" onerror="this.src='/logo.png'" alt="Ghajini 2.0" class="brand-logo" onclick="switchPortal('patient')">
       <div class="header-title">
         <h1>Ghajini 2.0</h1>
         <p>AI Memory Integrity & CardioLife Care</p>
@@ -575,7 +587,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
   <div id="patient-view" class="patient-container" style="display: none;">
 
     <div class="patient-hero">
-      <img src="data:image/png;base64,__LOGO_B64__" alt="Ghajini Robot Friend" class="patient-logo">
+      <img src="data:image/png;base64,__LOGO_B64__" onerror="this.src='/logo.png'" alt="Ghajini Robot Friend" class="patient-logo">
       <div class="patient-greeting" id="p-greeting">
         नमस्ते! मैं गजिनी हूँ।
       </div>

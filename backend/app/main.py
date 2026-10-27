@@ -137,6 +137,22 @@ def serve_caregiver_dashboard():
     return get_dashboard_html()
 
 
+@app.get("/logo.png", tags=["dashboard"])
+@app.get("/static/logo.png", tags=["dashboard"])
+def get_logo():
+    """Serves the transparent logo PNG."""
+    from fastapi.responses import FileResponse, Response
+    import base64
+    logo_path = os.path.join(os.path.dirname(__file__), "static", "logo.png")
+    if os.path.exists(logo_path):
+        return FileResponse(logo_path, media_type="image/png")
+    try:
+        from app.static.logo_data import LOGO_BASE64
+        return Response(content=base64.b64decode(LOGO_BASE64), media_type="image/png")
+    except Exception:
+        return Response(status_code=404)
+
+
 @app.get("/health")
 @app.get(f"{settings.API_V1_STR}/health")
 async def health_check():
