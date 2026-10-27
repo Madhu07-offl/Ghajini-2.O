@@ -166,10 +166,18 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
       padding: 0 20px;
       display: flex;
       align-items: center;
-      justify-content: space-between;
       position: sticky;
       top: 0;
       z-index: 100;
+    }
+    .desktop-top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+    .mobile-top-bar {
+      display: none;
     }
     .top-bar-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
     .mobile-brand-icon { display: none; width: 34px; height: 34px; border-radius: 8px; background: var(--primary-light); align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
@@ -783,14 +791,19 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
     /* MOBILE OPTIMIZATIONS (Screen width <= 768px)             */
     /* ======================================================== */
     @media (max-width: 768px) {
+      html, body {
+        overflow-x: hidden;
+        max-width: 100vw;
+        width: 100%;
+      }
       body {
-        padding-bottom: 64px; /* Room for bottom navigation bar */
+        padding-bottom: calc(64px + env(safe-area-inset-bottom, 16px));
       }
 
       /* 1. Sidebar becomes Bottom Thumb Navigation Bar */
       .sidebar {
         width: 100%;
-        height: 56px;
+        height: calc(56px + env(safe-area-inset-bottom, 14px));
         top: auto;
         bottom: 0;
         left: 0;
@@ -800,9 +813,10 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
         flex-direction: row;
         justify-content: space-around;
         padding: 0 4px;
-        padding-bottom: env(safe-area-inset-bottom, 0px);
-        box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
+        padding-bottom: env(safe-area-inset-bottom, 14px);
+        box-shadow: 0 -3px 16px rgba(0,0,0,0.08);
         background: #FFFFFF;
+        z-index: 1000;
       }
       .sidebar-top {
         flex-direction: row;
@@ -811,7 +825,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
         gap: 0;
       }
       .sidebar-logo, .sidebar-bottom {
-        display: none; /* Logo is in top bar on mobile */
+        display: none !important;
       }
       .nav-icons {
         flex-direction: row;
@@ -821,17 +835,47 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
         gap: 0;
       }
       .nav-icon-btn {
-        width: 50px;
+        flex: 1;
         height: 52px;
         border-radius: 8px;
         padding: 4px 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        color: var(--text-muted);
+        background: transparent;
+        position: relative;
+      }
+      .nav-icon-btn svg {
+        width: 19px;
+        height: 19px;
+        stroke-width: 1.9;
       }
       .nav-icon-label {
-        display: block; /* Show text labels under icons on mobile */
+        display: block;
+        font-size: 10px;
+        font-weight: 500;
+        line-height: 1;
+      }
+      .nav-icon-btn.active {
+        color: var(--primary);
+        background: transparent;
+      }
+      .nav-icon-btn.active .nav-icon-label {
+        font-weight: 700;
+        color: var(--primary);
       }
       .nav-icon-btn.active::before {
-        left: 8px; right: 8px; top: 0; bottom: auto;
-        width: auto; height: 3px;
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 20%;
+        right: 20%;
+        width: 60%;
+        height: 3px;
+        background: var(--primary);
         border-radius: 0 0 3px 3px;
       }
 
@@ -839,87 +883,271 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
       .app-wrapper {
         margin-left: 0;
         width: 100%;
+        max-width: 100vw;
+        overflow-x: hidden;
       }
 
       /* 3. Top Header Bar on Mobile */
       .top-bar {
-        height: auto;
+        min-height: auto;
         padding: 10px 12px;
-        flex-wrap: wrap;
+        flex-direction: column;
         gap: 8px;
       }
-      .top-bar-left {
-        width: 100%;
-        justify-content: space-between;
-        gap: 8px;
+      .desktop-top-bar {
+        display: none !important;
       }
-      .mobile-brand-icon {
+      .mobile-top-bar {
         display: flex;
-      }
-      .agent-name-input {
-        flex: 1;
-        width: auto;
-        font-size: 13px;
-        padding: 6px 8px;
-      }
-      .header-pill {
-        display: none; /* Hide non-essential pills on small screens */
-      }
-      .top-bar-right {
+        flex-direction: column;
         width: 100%;
+        gap: 8px;
+      }
+      .mobile-nav-header {
+        display: flex;
+        align-items: center;
         justify-content: space-between;
-        gap: 6px;
-        flex-wrap: nowrap;
+        width: 100%;
+      }
+      .mobile-brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+      }
+      .mobile-logo-img {
+        width: 36px;
+        height: 36px;
+        object-fit: contain;
+        border-radius: 8px;
+        background: var(--primary-light);
+        padding: 2px;
+      }
+      .mobile-brand-meta {
+        display: flex;
+        flex-direction: column;
+      }
+      .mobile-brand-name {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--text-title);
+        letter-spacing: -0.2px;
+        line-height: 1.2;
+      }
+      .mobile-brand-sub {
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .badge-dot-live {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #10B981;
+        display: inline-block;
+        box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+      }
+      .mobile-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .btn-patient-switch-mobile {
+        background: #EDE9FE;
+        color: #6D28D9;
+        border: 1px solid #DDD6FE;
+        height: 34px;
+        padding: 0 11px;
+        border-radius: 8px;
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .btn-avatar-mobile {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        background: var(--primary);
+        color: white;
+        font-size: 13px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        cursor: pointer;
+      }
+
+      /* Mobile Action Ribbon */
+      .mobile-action-ribbon {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
         overflow-x: auto;
         scrollbar-width: none;
         -webkit-overflow-scrolling: touch;
+        padding-bottom: 2px;
       }
-      .top-bar-right::-webkit-scrollbar { display: none; }
-      .test-with-label { display: none; }
-      .btn-ask-ai, .btn-teal, .btn-outline, .btn-patient-switch {
-        height: 34px;
-        padding: 0 10px;
+      .mobile-action-ribbon::-webkit-scrollbar { display: none; }
+      .ribbon-btn {
+        height: 32px;
+        padding: 0 11px;
+        border-radius: 18px;
         font-size: 12px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        white-space: nowrap;
         flex-shrink: 0;
+        cursor: pointer;
+        border: none;
+      }
+      .ribbon-btn-teal {
+        background: var(--primary);
+        color: white;
+      }
+      .ribbon-btn-teal-dark {
+        background: #065F46;
+        color: white;
+      }
+      .ribbon-btn-orange {
+        background: var(--accent-orange);
+        color: white;
+      }
+      .ribbon-btn-outline {
+        background: white;
+        border: 1px solid var(--card-border);
+        color: var(--text-title);
       }
 
       /* 4. Tab Bar on Mobile */
       .tab-bar {
         padding: 6px 10px;
+        min-height: 44px;
       }
       .segmented-tabs {
         width: 100%;
+        overflow-x: auto;
+        flex-wrap: nowrap;
       }
       .tab-btn {
-        padding: 6px 10px;
+        padding: 6px 11px;
         font-size: 12px;
+        flex-shrink: 0;
       }
       .tab-bar-right {
-        display: none; /* Compact for mobile */
+        display: none;
       }
 
-      /* 5. Main Content Area */
+      /* 5. Main Content Area & Cards */
       .content-area {
-        padding: 14px 10px;
+        padding: 12px 10px calc(76px + env(safe-area-inset-bottom, 14px)) 10px;
+        width: 100%;
+        max-width: 100vw;
+        box-sizing: border-box;
+        overflow-x: hidden;
       }
       .two-column-grid {
         grid-template-columns: 1fr;
-        gap: 14px;
+        gap: 12px;
       }
       .card {
-        padding: 16px 12px;
+        padding: 14px 12px;
         border-radius: 12px;
-        margin-bottom: 14px;
+        margin-bottom: 12px;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        overflow: hidden;
       }
 
-      /* iOS Form Zoom Prevention (Min 16px for form controls on mobile) */
+      /* Card Header Wrapping on Mobile */
+      .card-header-clean {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        width: 100%;
+      }
+      .card-header-clean > div {
+        width: 100%;
+      }
+      .card-header-clean .btn-outline,
+      .card-header-clean .header-pill {
+        align-self: flex-start;
+      }
+      .card-title {
+        font-size: 14.5px;
+        line-height: 1.3;
+      }
+      .card-sub {
+        font-size: 11.5px;
+        line-height: 1.4;
+      }
+
+      /* Setting Tiles: Stack gracefully with full-width button */
+      .setting-tile {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        padding: 12px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+      .setting-tile:has(.switch) {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .setting-tile-info {
+        width: 100%;
+        min-width: 0;
+      }
+      .setting-tile-title {
+        font-size: 13px;
+        line-height: 1.3;
+      }
+      .setting-tile-desc {
+        font-size: 11px;
+        line-height: 1.4;
+        margin-top: 2px;
+      }
+      .setting-tile .btn-outline {
+        width: 100%;
+        justify-content: center;
+        height: 36px;
+        font-size: 12.5px;
+        background: white;
+      }
+
+      /* Form Labels & Zoom Prevention */
+      .form-label {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: baseline;
+        flex-wrap: wrap;
+        gap: 4px;
+        font-size: 12.5px;
+      }
+      .form-label-counter {
+        font-size: 11px;
+        color: var(--text-muted);
+      }
       .form-control, textarea.form-control {
-        font-size: 16px;
+        font-size: 16px; /* iOS Safari auto-zoom prevention */
       }
 
       /* Simulator Height on Mobile */
       .simulator-container {
-        height: 400px;
+        height: 380px;
       }
 
       /* Vitals Grid Stacking on Mobile */
@@ -974,9 +1202,13 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
       </div>
 
       <nav class="nav-icons">
-        <button class="nav-icon-btn active" id="nav-assistant" title="Assistant Studio" onclick="switchTab('assistant')">
+        <button class="nav-icon-btn active" id="nav-assistant" title="Studio" onclick="switchTab('assistant')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
           <span class="nav-icon-label">Studio</span>
+        </button>
+        <button class="nav-icon-btn" id="nav-postcall" title="CardioLife Vitals" onclick="switchTab('postcall')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          <span class="nav-icon-label">Vitals</span>
         </button>
         <button class="nav-icon-btn" id="nav-calls" title="Call Rules & Policy" onclick="switchTab('calls')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
@@ -986,17 +1218,9 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
           <span class="nav-icon-label">Memory</span>
         </button>
-        <button class="nav-icon-btn" id="nav-postcall" title="CardioLife Vitals" onclick="switchTab('postcall')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-          <span class="nav-icon-label">Vitals</span>
-        </button>
-        <button class="nav-icon-btn" id="nav-integrations" title="Integrations & Telegram" onclick="switchTab('integrations')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-          <span class="nav-icon-label">Telegram</span>
-        </button>
-        <button class="nav-icon-btn" id="nav-history" title="Call Logs" onclick="switchTab('history')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          <span class="nav-icon-label">Logs</span>
+        <button class="nav-icon-btn" id="nav-caregiver" title="Caregiver Profile & Settings" onclick="openCaregiverModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/></svg>
+          <span class="nav-icon-label">Caregiver</span>
         </button>
       </nav>
     </div>
@@ -1016,55 +1240,102 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
 
     <!-- 2. TOP HEADER BAR -->
     <header class="top-bar">
-      <div class="top-bar-left">
-        <!-- Mobile Logo Icon -->
-        <div class="mobile-brand-icon" onclick="switchPortal('studio')" title="Ghajini 2.0">
-          <img src="data:image/png;base64,__LOGO_B64__" onerror="this.src='/logo.png'" alt="Ghajini">
+      <!-- Desktop Top Bar (Clean Agency Studio Header) -->
+      <div class="desktop-top-bar">
+        <div class="top-bar-left">
+          <div class="mobile-brand-icon" onclick="switchPortal('studio')" title="Ghajini 2.0" style="display: flex;">
+            <img src="data:image/png;base64,__LOGO_B64__" onerror="this.src='/logo.png'" alt="Ghajini">
+          </div>
+          <button class="back-btn" title="Back" onclick="switchTab('assistant')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          </button>
+          <input type="text" class="agent-name-input" value="Ghajini 2.0 (Alzheimer's Companion)">
+          <div class="header-pill header-pill-red" title="SIM Direct Calling Enabled">
+            <span style="font-size: 10px;">●</span> Outgoing (SIM)
+          </div>
+          <div class="header-pill" title="API Schemas & Endpoints" onclick="window.open('/docs', '_blank')">
+            { } API
+          </div>
         </div>
-        <button class="back-btn" title="Back" onclick="switchTab('assistant')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-        </button>
-        <input type="text" class="agent-name-input" value="Ghajini 2.0 (Alzheimer's Companion)">
-        <div class="header-pill header-pill-red" title="SIM Direct Calling Enabled">
-          <span style="font-size: 10px;">●</span> Outgoing (SIM)
-        </div>
-        <div class="header-pill" title="API Schemas & Endpoints" onclick="window.open('/docs', '_blank')">
-          { } API
+
+        <div class="top-bar-right">
+          <!-- Orange Ask AI Button -->
+          <button class="btn-ask-ai" onclick="openAskAIModal()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            Ask AI
+          </button>
+
+          <span class="test-with-label">Test with:</span>
+
+          <!-- Teal Test Action Buttons -->
+          <button class="btn-teal" onclick="openChatDrawer()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            Chat
+          </button>
+          <button class="btn-teal" onclick="openWebVoiceModal()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/></svg>
+            Web Call
+          </button>
+          <button class="btn-teal" style="background: #065F46;" onclick="openPhoneCallModal()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            Phone Call
+          </button>
+
+          <!-- Deploy Dropdown -->
+          <button class="btn-outline" onclick="openDeployModal()">
+            Deploy ▾
+          </button>
+
+          <!-- Toggle to Patient Simple View -->
+          <button class="btn-patient-switch" onclick="switchPortal('patient')">
+            👤 Patient
+          </button>
         </div>
       </div>
 
-      <div class="top-bar-right">
-        <!-- Orange Ask AI Button -->
-        <button class="btn-ask-ai" onclick="openAskAIModal()">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-          Ask AI
-        </button>
+      <!-- Mobile Top Bar (Clean Native Mobile Health Header) -->
+      <div class="mobile-top-bar">
+        <div class="mobile-nav-header">
+          <div class="mobile-brand" onclick="switchPortal('studio')" title="Ghajini 2.0 Studio">
+            <img class="mobile-logo-img" src="data:image/png;base64,__LOGO_B64__" onerror="this.src='/logo.png'" alt="Ghajini">
+            <div class="mobile-brand-meta">
+              <div class="mobile-brand-name">Ghajini 2.0</div>
+              <div class="mobile-brand-sub"><span class="badge-dot-live"></span> Companion Active</div>
+            </div>
+          </div>
+          <div class="mobile-header-actions">
+            <button class="btn-patient-switch-mobile" onclick="switchPortal('patient')" title="Switch to Simple Patient View">
+              <span>👴</span> Patient
+            </button>
+            <button class="btn-avatar-mobile" onclick="openCaregiverModal()" title="Priya Sharma (Caregiver Profile)">
+              P
+            </button>
+          </div>
+        </div>
 
-        <span class="test-with-label">Test with:</span>
-
-        <!-- Teal Test Action Buttons -->
-        <button class="btn-teal" onclick="openChatDrawer()">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          Chat
-        </button>
-        <button class="btn-teal" onclick="openWebVoiceModal()">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/></svg>
-          Web Call
-        </button>
-        <button class="btn-teal" style="background: #065F46;" onclick="openPhoneCallModal()">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-          Phone Call
-        </button>
-
-        <!-- Deploy Dropdown -->
-        <button class="btn-outline" onclick="openDeployModal()">
-          Deploy ▾
-        </button>
-
-        <!-- Toggle to Patient Simple View -->
-        <button class="btn-patient-switch" onclick="switchPortal('patient')">
-          👤 Patient
-        </button>
+        <!-- Mobile Quick Test Action Ribbon -->
+        <div class="mobile-action-ribbon">
+          <button class="ribbon-btn ribbon-btn-teal-dark" onclick="openPhoneCallModal()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            <span>Call Priya</span>
+          </button>
+          <button class="ribbon-btn ribbon-btn-teal" onclick="openWebVoiceModal()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/></svg>
+            <span>Web Voice</span>
+          </button>
+          <button class="ribbon-btn ribbon-btn-teal" onclick="openChatDrawer()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span>Chat</span>
+          </button>
+          <button class="ribbon-btn ribbon-btn-orange" onclick="openAskAIModal()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <span>Ask AI</span>
+          </button>
+          <button class="ribbon-btn ribbon-btn-outline" onclick="openDeployModal()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+            <span>Deploy</span>
+          </button>
+        </div>
       </div>
     </header>
 
