@@ -93,10 +93,13 @@ class FaceEngine:
                         norm_emb = self._normalize(np.array(raw_emb, dtype=np.float32))
                         quality = float(getattr(best_face, "det_score", 0.8))
                         return norm_emb, quality
+                # No face detected by InsightFace
+                return None, 0.0
             except Exception as e:
                 logger.error(f"Error during InsightFace extraction: {e}")
+                return None, 0.0
 
-        # Fallback pseudo-embedding if model not loaded or for synthetic evaluation images
+        # Fallback pseudo-embedding only if InsightFace model is not loaded at all
         # Deterministically hash image data to 512 dimensions for consistency
         resized = cv2.resize(img, (32, 16)).flatten()
         vector = np.zeros(self.embedding_dim, dtype=np.float32)
