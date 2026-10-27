@@ -76,8 +76,11 @@ class Settings(BaseSettings):
     )
 
     def init_directories(self) -> None:
-        Path(self.DATA_DIR).mkdir(parents=True, exist_ok=True)
-        Path(self.UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
+        try:
+            Path(self.DATA_DIR).mkdir(parents=True, exist_ok=True)
+            Path(self.UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
+        except OSError:
+            pass
 
 
 settings = Settings()

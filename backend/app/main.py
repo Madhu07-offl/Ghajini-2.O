@@ -65,16 +65,36 @@ async def lifespan(app: FastAPI):
     # Startup with timing and full model warm-up
     t0 = time.time()
     logger.info("Starting Ghajini 2.0 backend...")
-    settings.init_directories()
-    init_db()
-    await mongo_manager.init()
-    preload_indices()
-    voice_transcriber.load()
-    if not os.environ.get("PYTEST_CURRENT_TEST") and not os.environ.get("TESTING"):
-        start_scheduler()
+    is_serverless = bool(os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
+    try:
+        settings.init_directories()
+    except Exception as e:
+        logger.warning(f"Directory initialization notice: {e}")
+    try:
+        init_db()
+    except Exception as e:
+        logger.warning(f"Database initialization notice: {e}")
+    try:
+        await mongo_manager.init()
+    except Exception as e:
+        logger.warning(f"Mongo initialization notice: {e}")
+    try:
+        preload_indices()
+    except Exception as e:
+        logger.warning(f"Indices preload notice: {e}")
+    try:
+        voice_transcriber.load()
+    except Exception as e:
+        logger.warning(f"Transcriber load notice: {e}")
+
+    if not is_serverless and not os.environ.get("PYTEST_CURRENT_TEST") and not os.environ.get("TESTING"):
+        try:
+            start_scheduler()
+        except Exception as e:
+            logger.warning(f"Scheduler start notice: {e}")
 
     # Pre-warm Ollama if not running in pytest or test mode
-    if not os.environ.get("PYTEST_CURRENT_TEST") and not os.environ.get("TESTING"):
+    if not is_serverless and not os.environ.get("PYTEST_CURRENT_TEST") and not os.environ.get("TESTING"):
         try:
             await asyncio.wait_for(ollama_client.generate_answer("hello", ["hello"]), timeout=0.5)
             logger.info("Ollama LLM warm-up completed successfully.")
@@ -86,7 +106,11 @@ async def lifespan(app: FastAPI):
     yield
     # Shutdown
     logger.info("Shutting down Ghajini 2.0 backend...")
-    stop_scheduler()
+    if not is_serverless:
+        try:
+            stop_scheduler()
+        except Exception:
+            pass
 
 
 app = FastAPI(

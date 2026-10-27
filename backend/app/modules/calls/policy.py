@@ -49,12 +49,13 @@ async def check_call_policy(
     source: str,
     db: Session,
     override_now: Optional[datetime] = None,
+    bypass_cooldown: bool = False,
 ) -> Tuple[bool, Optional[str], Optional[Person], List[Person]]:
     """
     Evaluates deterministic safety and throttling rules:
     1. Valid trigger check.
     2. Quiet hours check (only emergency triggers allowed during quiet hours).
-    3. 2-minute cool-down between call attempts.
+    3. 2-minute cool-down between call attempts (bypassed if bypass_cooldown=True or manual).
     4. Max 3 call attempts per hour per patient.
     5. Resolves emergency contacts in priority order.
 
@@ -93,21 +94,22 @@ async def check_call_policy(
         logger.warning(f"Error querying calls collection: {e}")
         recent_calls = []
 
-    # 4. Check 2-minute cool-down
-    for call in recent_calls:
-        call_time_str = call.get("created_at")
-        if call_time_str:
-            try:
-                call_dt = datetime.fromisoformat(call_time_str)
-                if call_dt > cooldown_cutoff:
-                    remaining_sec = int((call_dt + timedelta(seconds=settings.CALL_COOLDOWN_SECONDS) - now).total_seconds())
-                    wait_str = f"{max(1, remaining_sec)} seconds" if remaining_sec < 60 else "2 minutes"
-                    return False, f"Please wait {wait_str} before attempting another call.", None, []
-            except Exception:
-                pass
+    # 4. Check 2-minute cool-down (skipped if bypass_cooldown=True or manual caretaker trigger)
+    if not bypass_cooldown and normalized_source != "manual":
+        for call in recent_calls:
+            call_time_str = call.get("created_at")
+            if call_time_str:
+                try:
+                    call_dt = datetime.fromisoformat(call_time_str)
+                    if call_dt > cooldown_cutoff:
+                        remaining_sec = int((call_dt + timedelta(seconds=settings.CALL_COOLDOWN_SECONDS) - now).total_seconds())
+                        wait_str = f"{max(1, remaining_sec)} seconds" if remaining_sec < 60 else "2 minutes"
+                        return False, f"Please wait {wait_str} before attempting another call.", None, []
+                except Exception:
+                    pass
 
-    # 5. Check hourly limit (Max 3 per hour)
-    if len(recent_calls) >= settings.CALL_MAX_PER_HOUR:
+    # 5. Check hourly limit (Max 3 per hour, skipped if manual bypass)
+    if not bypass_cooldown and normalized_source != "manual" and len(recent_calls) >= settings.CALL_MAX_PER_HOUR:
         return False, f"Maximum {settings.CALL_MAX_PER_HOUR} calls per hour reached. Please wait before trying again.", None, []
 
     # 6. Retrieve emergency contacts

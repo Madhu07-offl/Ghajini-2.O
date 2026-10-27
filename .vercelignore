@@ -1,0 +1,14 @@
+.venv/
+backend/.venv/
+.uv-python/
+frontend/
+demo_assets/
+data/uploads/
+*.db-shm
+*.db-wal
+__pycache__/
+*.pyc
+.pytest_cache/
+.git/
+.gitignore
+.env

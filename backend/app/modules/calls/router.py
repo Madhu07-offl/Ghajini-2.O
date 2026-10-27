@@ -38,6 +38,7 @@ class CallRequestPayload(BaseModel):
     source: str  # "sos", "emergency_phrase", "reminder_escalation", "missed_checkins", "call_family", "manual"
     lang: Optional[str] = "en"
     contact_index: Optional[int] = 0
+    bypass_cooldown: Optional[bool] = False
 
 
 class CallResponse(BaseModel):
@@ -100,6 +101,7 @@ async def request_call(
         reason=payload.reason,
         source=payload.source,
         db=db,
+        bypass_cooldown=bool(payload.bypass_cooldown),
     )
 
     if not allowed or not primary_contact:
@@ -395,3 +397,22 @@ async def get_call_history(
     except Exception as e:
         logger.warning(f"Error reading call history: {e}")
         return []
+
+
+@router.post("/reset-cooldown")
+async def reset_cooldown(
+    patient_id: int = Query(default=1),
+):
+    """
+    Clears recent call records from MongoDB for the patient,
+    immediately removing any active 2-minute cool-down or hourly limit lock.
+    """
+    try:
+        calls_coll = mongo_manager.get_collection("calls")
+        await calls_coll.delete_many({"patient_id": patient_id})
+        return {
+            "status": "success",
+            "message": f"Call cool-down and throttle reset successfully for patient {patient_id}.",
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
