@@ -139,7 +139,14 @@ class _AskScreenState extends ConsumerState<AskScreen> {
     final tts = ref.read(ttsServiceProvider);
 
     try {
-      final res = await api.askQuestion(text: text, lang: currentLang);
+      final res = await api.askQuestion(text: text, lang: currentLang).timeout(
+        const Duration(seconds: 15),
+        onTimeout: () => AskResponseModel(
+          answer: "I am not sure. Shall I call your family?",
+          grounded: false,
+          sources: [],
+        ),
+      );
       if (mounted) {
         setState(() {
           _response = res;
@@ -153,7 +160,7 @@ class _AskScreenState extends ConsumerState<AskScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _errorMessage = "I couldn't recall that right now. Don't worry, your family is always here.";
+          _errorMessage = "I am not sure. Shall I call your family?";
         });
       }
     }
@@ -373,8 +380,8 @@ class _AskScreenState extends ConsumerState<AskScreen> {
                         CircularProgressIndicator(strokeWidth: 4),
                         SizedBox(height: 16),
                         Text(
-                          'Searching your memories...',
-                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+                          'Let me think...',
+                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.primaryDark),
                         ),
                       ],
                     ),

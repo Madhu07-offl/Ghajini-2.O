@@ -252,6 +252,101 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
+  void _showDemoToolsDialog() {
+    final tts = ref.read(ttsServiceProvider);
+    final api = ref.read(apiServiceProvider);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: const [
+            Icon(Icons.build_circle, color: AppTheme.accentAmber, size: 30),
+            SizedBox(width: 10),
+            Text('Hidden Demo Tools', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Quick actions for live demonstration:',
+              style: TextStyle(fontSize: 18, color: Colors.black87),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E3A8A), minimumSize: const Size(0, 56)),
+              onPressed: () async {
+                Navigator.pop(ctx);
+                try {
+                  final res = await api.resetDemoData();
+                  ref.invalidate(upcomingRemindersProvider);
+                  ref.invalidate(dueRemindersProvider);
+                  ref.invalidate(peopleListProvider);
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Demo reset: ${res["message"] ?? "Done"}', style: const TextStyle(fontSize: 18)),
+                      backgroundColor: AppTheme.gentleGreen,
+                    ),
+                  );
+                } catch (e) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Could not reset demo data.', style: TextStyle(fontSize: 18)), backgroundColor: AppTheme.distressRed),
+                  );
+                }
+              },
+              icon: const Icon(Icons.restart_alt, size: 26),
+              label: const Text('Reset Demo Data', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.gentleGreen, minimumSize: const Size(0, 56)),
+              onPressed: () async {
+                Navigator.pop(ctx);
+                try {
+                  await api.triggerReminderNow();
+                  await _checkDueReminders();
+                } catch (_) {}
+              },
+              icon: const Icon(Icons.alarm_on, size: 26),
+              label: const Text('Trigger Reminder Now', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.distressRed, minimumSize: const Size(0, 56)),
+              onPressed: () async {
+                Navigator.pop(ctx);
+                _handleSOS();
+              },
+              icon: const Icon(Icons.sos, size: 26),
+              label: const Text('Trigger SOS Alert', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(minimumSize: const Size(0, 56), side: const BorderSide(color: AppTheme.primaryDark, width: 2)),
+              onPressed: () {
+                final current = ref.read(currentLanguageProvider);
+                final next = current == 'en' ? 'hi' : (current == 'hi' ? 'pa' : 'en');
+                ref.read(currentLanguageProvider.notifier).state = next;
+                Navigator.pop(ctx);
+                final langName = next == 'en' ? 'English' : (next == 'hi' ? 'Hindi' : 'Punjabi');
+                tts.speak('Language changed to $langName');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Language: $langName', style: const TextStyle(fontSize: 18)), backgroundColor: AppTheme.primaryDark),
+                );
+              },
+              icon: const Icon(Icons.translate, size: 26),
+              label: const Text('Switch Language', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _callFamily() async {
     final Uri telUri = Uri(scheme: 'tel', path: '+919876543210');
     try {
@@ -267,13 +362,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Ghajini Companion',
-          style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+        title: GestureDetector(
+          onLongPress: _showDemoToolsDialog,
+          child: const Text(
+            'Ghajini Companion',
+            style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+          ),
         ),
         backgroundColor: AppTheme.primaryDark,
         foregroundColor: Colors.white,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.analytics_outlined, size: 30),
+            tooltip: 'Caregiver Dashboard',
+            onPressed: () => context.push('/dashboard'),
+          ),
           IconButton(
             icon: const Icon(Icons.admin_panel_settings, size: 30),
             tooltip: 'Caregiver Portal',

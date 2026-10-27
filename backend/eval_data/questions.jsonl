@@ -1,0 +1,20 @@
+{"q": "Where does Priya live?", "expect": ["Bangalore"], "lang": "en"}
+{"q": "Who is Priya?", "expect": ["daughter"], "lang": "en"}
+{"q": "Who is Arun?", "expect": ["son"], "lang": "en"}
+{"q": "Where does Arun live?", "expect": ["Indiranagar"], "lang": "en"}
+{"q": "Who is Dr. Sharma?", "expect": ["doctor", "physician"], "lang": "en"}
+{"q": "What time do I take my blood pressure medicine?", "expect": ["9:00 AM", "morning", "9"], "lang": "en"}
+{"q": "Where are my spectacles and reading glasses kept?", "expect": ["bedside table"], "lang": "en"}
+{"q": "Where is my walking stick?", "expect": ["umbrella stand", "front door"], "lang": "en"}
+{"q": "What is the home address?", "expect": ["42 Palm Avenue"], "lang": "en"}
+{"q": "What is Arun's phone number?", "expect": ["9876543210"], "lang": "en"}
+{"q": "Priya kahan rehti hai?", "expect": ["Bangalore"], "lang": "hi"}
+{"q": "Dawai kab leni hai?", "expect": ["9", "morning"], "lang": "hi"}
+{"q": "Arun kaun hai?", "expect": ["son", "beta"], "lang": "hi"}
+{"q": "Chashma kahan rakha hai?", "expect": ["bedside table"], "lang": "hi"}
+{"q": "Priya kithe rehndi hai?", "expect": ["Bangalore"], "lang": "pa"}
+{"q": "Arun kithe rehnda hai?", "expect": ["Indiranagar"], "lang": "pa"}
+{"q": "What is the capital of Peru?", "expect": ["I am not sure"], "lang": "en"}
+{"q": "Who won the Martian football championship in 2050?", "expect": ["I am not sure"], "lang": "en"}
+{"q": "What is the secret formula of the moon cake?", "expect": ["I am not sure"], "lang": "en"}
+{"q": "Chandigarh to London flight kitne baje hai?", "expect": ["I am not sure", "मुझे पक्का नहीं पता"], "lang": "hi"}

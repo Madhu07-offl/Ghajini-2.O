@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:ghajini_app/core/api_client.dart';
 import 'package:ghajini_app/models/alert_model.dart';
+import 'package:ghajini_app/models/dashboard_summary.dart';
 import 'package:ghajini_app/models/memory.dart';
 import 'package:ghajini_app/models/person.dart';
 import 'package:ghajini_app/models/recognition_result.dart';
@@ -230,5 +231,60 @@ class ApiService {
     );
     final list = res.data as List<dynamic>;
     return list.map((e) => AlertModel.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  /// Get Caregiver Dashboard summary metrics
+  Future<DashboardSummary> getDashboardSummary({int patientId = 1}) async {
+    final res = await _dio.get(
+      '/dashboard/summary',
+      queryParameters: {'patient_id': patientId},
+    );
+    return DashboardSummary.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  /// Get plain-English daily summary
+  Future<DailySummary> getDailySummary({int patientId = 1}) async {
+    final res = await _dio.get(
+      '/dashboard/daily-summary',
+      queryParameters: {'patient_id': patientId},
+    );
+    return DailySummary.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  /// Reset demo data to initial pristine demo state
+  Future<Map<String, dynamic>> resetDemoData({int patientId = 1}) async {
+    final res = await _dio.post(
+      '/demo/reset',
+      queryParameters: {'patient_id': patientId},
+    );
+    return res.data as Map<String, dynamic>;
+  }
+
+  /// Force-trigger a reminder immediately for live demonstration
+  Future<Map<String, dynamic>> triggerReminderNow({int patientId = 1}) async {
+    final res = await _dio.post(
+      '/demo/trigger-reminder',
+      queryParameters: {'patient_id': patientId},
+    );
+    return res.data as Map<String, dynamic>;
+  }
+
+  /// Export all patient personal data as ZIP
+  Future<List<int>> exportData({int patientId = 1}) async {
+    final res = await _dio.get(
+      '/privacy/export',
+      queryParameters: {'patient_id': patientId},
+      options: Options(responseType: ResponseType.bytes),
+    );
+    return res.data as List<int>;
+  }
+
+  /// Wipe all patient records, faces, reminders and audit logs
+  Future<bool> wipeAllData({int patientId = 1}) async {
+    final res = await _dio.delete(
+      '/privacy/all',
+      queryParameters: {'patient_id': patientId},
+    );
+    return res.statusCode == 200;
   }
 }

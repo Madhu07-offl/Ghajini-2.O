@@ -135,9 +135,21 @@ class _CaregiverScreenState extends ConsumerState<CaregiverScreen> with SingleTi
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Caregiver Dashboard'),
+        title: const Text('Caregiver Portal'),
         backgroundColor: AppTheme.primaryDark,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.analytics_outlined, size: 28),
+            tooltip: 'Adherence Analytics',
+            onPressed: () => context.push('/dashboard'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.privacy_tip_outlined, size: 28),
+            tooltip: 'Privacy & Data',
+            onPressed: () => context.push('/privacy'),
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           labelColor: Colors.white,

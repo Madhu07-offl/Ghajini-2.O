@@ -1,0 +1,9 @@
+{
+  "total_questions": 20,
+  "correct_count": 17,
+  "accuracy_pct": 85.0,
+  "not_sure_count": 11,
+  "hallucination_count": 0,
+  "average_latency_ms": 2390.2,
+  "slowest_latency_ms": 2682.5
+}

@@ -333,3 +333,84 @@ def test_10_privacy_export_returns_zip():
             assert "audit_logs" in export_data
             assert export_data["export_metadata"]["patient_id"] == 1
 
+
+def test_11_dashboard_summary_numbers_match_seeded_logs():
+    """11. Caregiver Dashboard analytics summary & daily plain-English report."""
+    # 1. Summary analytics
+    res = client.get("/v1/dashboard/summary")
+    assert res.status_code == 200
+    data = res.json()
+    assert "adherence_pct" in data
+    assert "done_count" in data
+    assert "missed_count" in data
+    assert "total_reminders_7d" in data
+    assert "alerts_count" in data
+    assert "recognitions_today" in data
+    assert "top_questions" in data
+    assert "weekly_history" in data
+    assert len(data["weekly_history"]) == 7
+    assert isinstance(data["adherence_pct"], (int, float))
+
+    # 2. Daily plain-English report
+    daily_res = client.get("/v1/dashboard/daily-summary")
+    assert daily_res.status_code == 200
+    daily_data = daily_res.json()
+    assert "summary" in daily_data
+    assert "source" in daily_data
+    assert daily_data["source"] in ["llm", "template"]
+    assert len(daily_data["summary"]) > 10
+
+
+def test_12_demo_reset_restores_seed_state():
+    """12. Demo reset endpoint restores full pristine state with 3 people, 10 memories, 2 reminders, 1 place."""
+    res = client.post("/v1/demo/reset")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "reset_complete"
+    assert data["people"] == 3
+    assert data["memories"] == 10
+    assert data["reminders"] == 2
+    assert data["places"] == 1
+
+    # Verify 3 people exist
+    people_res = client.get("/v1/people")
+    assert people_res.status_code == 200
+    names = [p["name"] for p in people_res.json()]
+    assert "Priya" in names
+    assert "Dr. Sharma" in names
+    assert "Arun" in names
+
+    # Verify trigger-reminder
+    trig_res = client.post("/v1/demo/trigger-reminder")
+    assert trig_res.status_code == 200
+    assert trig_res.json()["status"] == "triggered"
+
+
+def test_13_health_endpoint_component_statuses():
+    """13. Health endpoint reports status of Mongo, Ollama, Face model, and Whisper model."""
+    res = client.get("/v1/health")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "healthy"
+    assert "mongo" in data
+    assert "ollama" in data
+    assert "face_model" in data
+    assert "whisper_model" in data
+    assert data["mongo"] in ["connected", "disconnected"]
+    assert data["ollama"] in ["available", "unavailable"]
+    assert data["face_model"] in ["loaded", "fallback"]
+    assert data["whisper_model"] in ["loaded", "fallback"]
+
+
+def test_14_timeout_and_fallback_prompt():
+    """14. Question timeout / unknown fact falls back safely without ungrounded hallucination."""
+    res = client.post(
+        "/v1/ask",
+        json={"text": "What is the capital city of Peru on planet Jupiter?", "lang": "en"},
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["grounded"] is False
+    assert data["answer"] == FALLBACK_NOT_SURE
+
+

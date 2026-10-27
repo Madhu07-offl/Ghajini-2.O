@@ -1,4 +1,13 @@
 services:
+  mongo:
+    image: mongo:latest
+    container_name: ghajini_mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+
   ollama:
     image: ollama/ollama:latest
     container_name: ghajini_ollama
@@ -19,6 +28,8 @@ services:
       - PROJECT_NAME=Ghajini 2.0
       - API_V1_STR=/v1
       - DATABASE_URL=sqlite:///./ghajini.db
+      - MONGODB_URL=mongodb://mongo:27017
+      - DEMO_MODE=true
       - FACE_T_HIGH=0.50
       - FACE_T_LOW=0.38
       - OLLAMA_BASE_URL=http://ollama:11434
@@ -33,8 +44,10 @@ services:
       - api_data:/app/data
     depends_on:
       - ollama
+      - mongo
     restart: unless-stopped
 
 volumes:
+  mongo_data:
   ollama_models:
   api_data:

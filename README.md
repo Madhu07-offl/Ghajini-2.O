@@ -1,6 +1,6 @@
 # Ghajini 2.0 - AI Memory Companion for Alzheimer's Patients
 
-A full-stack, local-first AI memory companion designed specifically for Alzheimer's patients and their caregivers. It features high-accuracy face recognition, grounded semantic memory retrieval, Ollama LLM integration, offline voice transcription with faster-whisper, automated medication reminders with iCal RRULE escalation, emergency phrase interception, caregiver alerts, and a high-contrast elderly-friendly UI.
+A full-stack, local-first AI memory companion designed specifically for Alzheimer's patients and their caregivers. It features high-accuracy face recognition, grounded semantic memory retrieval, Ollama LLM integration, offline voice transcription with faster-whisper, automated medication reminders with iCal RRULE escalation, emergency phrase interception, caregiver alerts, Caregiver Analytics Dashboard, and a high-contrast elderly-friendly UI.
 
 ---
 
@@ -11,7 +11,9 @@ A full-stack, local-first AI memory companion designed specifically for Alzheime
 - **Face Engine**: InsightFace (`buffalo_l`) + FAISS (`IndexFlatIP` on 512-d L2 normalized embeddings)
 - **Memory Retrieval**: SentenceTransformers (`paraphrase-multilingual-MiniLM-L12-v2`) + FAISS (`IndexFlatIP` on 384-d L2 normalized vectors)
 - **Chat / LLM**: Local Ollama (`llama3.2:3b`) with strict grounding prompts, multilingual fallback ("I am not sure" in English, Hindi, Punjabi), and emergency phrase interception
+- **Caregiver Dashboard**: 7-day adherence metrics, weekly dose bar chart, top repeated questions tracking, and template-based daily activity summary smoothed by Ollama
 - **Reminders & Escalation**: APScheduler + `python-dateutil` RRULE recurrence. 15-second frontend polling, 5-minute unacknowledged repeat, quiet hours suppression (22:00-06:00), and caregiver alert escalation via Twilio SMS stub
+- **Demo Mode**: Instant reset (`POST /v1/demo/reset`), live 1-minute reminder trigger, and hidden Demo Tools screen
 - **Privacy & Audit**: Strict face consent validation, complete data wipe, audit log (`audit_logs`), and GDPR/HIPAA compliant JSON export archive (ZIP)
 - **Frontend**: Flutter (Android + Web), Riverpod, GoRouter, Push-to-Talk audio recording (`record`), TTS (`flutter_tts` at rate 0.8), local notifications (`flutter_local_notifications`), emergency phone dialer (`url_launcher`), and high-contrast elderly-friendly UI (20sp+ typography, 64dp+ touch targets)
 
@@ -23,9 +25,9 @@ A full-stack, local-first AI memory companion designed specifically for Alzheime
 ghajini_2.0/
   backend/
     app/
-      main.py
+      main.py                   (Preloads models, warm-up timer, /health)
       core/config.py            (Settings from .env using pydantic-settings)
-      db/session.py, models.py  (SQLAlchemy 2.x, SQLite auto-migration)
+      db/session.py, models.py  (SQLAlchemy 2.x, SQLite auto-migration, Place model)
       modules/
         people/router.py        (Registration, consent, face vectors, recognition)
         faces/engine.py         (InsightFace buffalo_l + FAISS IndexFlatIP)
@@ -33,173 +35,152 @@ ghajini_2.0/
         chat/router.py, prompts.py, llm_client.py (Emergency interception, Ollama)
         voice/router.py, transcriber.py (faster-whisper small int8 CPU + VAD)
         alerts/router.py, service.py    (Caregiver alert dispatcher + Twilio SMS)
+        dashboard/router.py     (Adherence %, daily summary, top questions)
+        demo/router.py          (Demo reset, live reminder trigger)
         reminders/router.py, scheduler.py (APScheduler + RRULE + escalation)
         privacy/router.py       (ZIP export, complete data wipe, audit log)
-    scripts/seed_demo_data.py
-    tests/test_api.py           (10 pytest tests covering all critical paths)
+    scripts/
+      seed_demo_data.py
+      eval_faces.py             (TAR, FAR, FACE_T_HIGH/LOW threshold sweep)
+      eval_qa.py                (20 questions, accuracy, hallucination count)
+    tests/test_api.py           (14 pytest tests covering all critical paths)
+    eval_data/                  (Evaluation dataset for faces and Q&A)
+    eval_results/               (Output JSON reports for evaluations)
+    demo_assets/                (Sample photos for Priya, Dr. Sharma, Arun)
     requirements.txt, .env.example, Dockerfile
   frontend/
     lib/
       main.dart
       core/constants.dart, theme.dart, api_client.dart
-      models/person.dart, recognition_result.dart, memory.dart, reminder.dart, alert_model.dart
+      models/person.dart, recognition_result.dart, memory.dart, reminder.dart, alert_model.dart, dashboard_summary.dart
       services/api_service.dart, tts_service.dart
       providers/app_providers.dart
       router/app_router.dart
       screens/
-        home_screen.dart        (Greeting, due reminder card, SOS, Call Family)
-        recognize_screen.dart   (Camera capture / photo pick, voice output)
-        ask_screen.dart         (Push-to-talk mic, confirmation, replay, lang switch)
+        home_screen.dart        (Greeting, due reminder card, SOS, Call Family, Demo Tools)
+        recognize_screen.dart   (Camera capture / photo pick, voice output, confirm card)
+        ask_screen.dart         (Push-to-talk mic, 15s timeout, calm loading, lang switch)
+        caregiver_screen.dart   (Reminders manager, recent alerts feed)
+        dashboard_screen.dart   (Adherence gauge, custom weekly bar chart, top questions)
+        privacy_screen.dart     (GDPR export, person delete, wipe everything)
         add_person_screen.dart  (Caregiver: name, relationship, notes, consent, photos)
-        caregiver_screen.dart   (Caregiver portal: reminders manager, alert feed)
     pubspec.yaml
-  docker-compose.yml
+  scripts/
+    start_tunnel.py             (Public Cloudflare Tunnel / ngrok launcher)
+  DEMO_CHECKLIST.md             (1-page demo script, steps & fallback plan)
+  docker-compose.yml            (FastAPI + Ollama + MongoDB)
   README.md
 ```
 
 ---
 
-## Environment Variables (.env)
+## Run the Demo (Exact Commands)
 
-| Variable | Default | Description |
-|---|---|---|
-| `PROJECT_NAME` | `Ghajini 2.0` | Application name |
-| `API_V1_STR` | `/v1` | Base API prefix |
-| `DATABASE_URL` | `sqlite:///./ghajini.db` | SQLite database file location |
-| `DEFAULT_PATIENT_ID` | `1` | Default active patient ID |
-| `WHISPER_MODEL` | `small` | Faster-whisper model variant (`small`, `tiny`, `base`) |
-| `FEATURE_PUSH` | `true` | Enables push notification logging stub |
-| `FEATURE_SMS` | `false` | Enables Twilio SMS caregiver alerts |
-| `STORE_PHOTOS` | `false` | When `false`, raw recognition photos are discarded |
-| `ESCALATE_AFTER_MIN` | `10` | Minutes before unacknowledged reminder escalates |
-| `QUIET_HOURS_START` | `22` | Quiet hours start hour (22 = 10 PM) |
-| `QUIET_HOURS_END` | `6` | Quiet hours end hour (6 = 6 AM) |
-| `FACE_T_HIGH` | `0.50` | Face recognition high confidence threshold |
-| `FACE_T_LOW` | `0.38` | Face recognition low confidence threshold |
-| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama service endpoint |
-| `OLLAMA_MODEL` | `llama3.2:3b` | Default Ollama model name |
-| `TWILIO_ACCOUNT_SID` | `""` | Twilio account SID for SMS alerts |
-| `TWILIO_AUTH_TOKEN` | `""` | Twilio auth token |
-| `TWILIO_FROM_NUMBER` | `""` | Twilio sender phone number |
-| `CAREGIVER_ALERT_PHONE`| `+919876543210` | Caregiver emergency phone number |
-
----
-
-## 1. Quickstart with Docker Compose
-
-To run the entire system (FastAPI API + Ollama LLM service) with Docker:
-
+### 1. Start Services via Docker Compose
+Starts MongoDB, Ollama, and the FastAPI backend in containers:
 ```bash
-# Start backend and ollama containers
 docker-compose up -d
-
-# Pull the default Ollama model
 docker exec -it ghajini_ollama ollama pull llama3.2:3b
-
-# Seed demo data inside the API container
 docker exec -it ghajini_api python scripts/seed_demo_data.py
 ```
 
-The API will be available at `http://localhost:8000/v1` with documentation at `http://localhost:8000/docs`.
-
----
-
-## 2. Local Setup & Installation
-
-### Step A: Pull the Ollama Model
-
-If you have [Ollama](https://ollama.com) installed locally:
-
+### 2. Or Start Locally (Native)
+**Terminal 1 — MongoDB & Ollama**:
 ```bash
-# 1. Start Ollama service (if not already running)
-ollama serve
+# Start MongoDB (if installed locally or via docker)
+docker run -d -p 27017:27017 --name ghajini_mongo mongo:latest
 
-# 2. Pull the default 3B model
+# Start Ollama & pull model
+ollama serve
 ollama pull llama3.2:3b
 ```
 
-### Step B: Backend Setup
-
+**Terminal 2 — FastAPI Backend**:
 ```bash
 cd backend
+.\.venv\Scripts\activate      # On Windows
+# source .venv/bin/activate   # On Linux/macOS
 
-# Create Python 3.11 virtual environment
-python -m venv .venv
+# Seed pristine demo data
+python scripts/seed_demo_data.py
 
-# Activate venv
-# On Windows:
-.\.venv\Scripts\activate
-# On Linux/macOS:
-source .venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Configure environment variables
-cp .env.example .env
+# Start backend server
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### Step C: Seed Demo Data
-
-Seeds 3 people (Priya - daughter, Dr. Sharma - doctor, Arun - son), 10 memories, and one daily 9:00 AM blood pressure reminder:
-
+**Terminal 3 — Flutter Mobile or Web**:
 ```bash
-# From workspace root or backend folder
-python backend/scripts/seed_demo_data.py
+cd frontend
+
+# Mobile (Android Emulator / Device)
+flutter run -d android --dart-define=API_URL=http://10.0.2.2:8000/v1
+
+# Web (Chrome)
+flutter run -d chrome --dart-define=API_URL=http://localhost:8000/v1
 ```
 
-### Step D: Run Pytest Tests
+**Terminal 4 (Optional) — Public Web Build & Tunnel**:
+To expose the backend publicly for a Vercel/Netlify web deployment:
+```bash
+python scripts/start_tunnel.py
+# Use the printed URL in your build:
+flutter build web --dart-define=API_URL=https://<your-tunnel-url>/v1
+```
 
-Runs the full 10-test test suite:
+---
 
+## Evaluation Scripts
+
+### 1. Face Threshold Tuning (`eval_faces.py`)
+Reads `backend/eval_data/`, enrolls the first 3 photos of each person, tests positive photos and `_unknown/` strangers, sweeps thresholds, and writes `eval_results/faces.json`:
+```bash
+python backend/scripts/eval_faces.py
+```
+
+### 2. Grounding & Q&A Accuracy Check (`eval_qa.py`)
+Tests 20 questions in English, Hindi (Hinglish), and Punjabi. Verifies that hallucinations are 0, out-of-domain queries return fallback, and logs latency:
+```bash
+python backend/scripts/eval_qa.py
+```
+
+---
+
+## Running the Automated Test Suite
+
+Runs all 14 end-to-end integration tests:
 ```bash
 python -m pytest backend/tests -v
 ```
 
-All 10 tests verify:
-1. Health check & engine status
-2. Create person with consent validation
-3. Ask with known fact from memory
-4. Ask with unknown fact (verifies exact translated fallback)
-5. Delete person
-6. Voice transcription of 16kHz mono WAV audio
-7. Emergency phrase interception (skips LLM, generates caregiver alert)
-8. Reminder scheduling, 15s `/due` polling, repetition at 5m, and escalation
-9. Complete face vector purging on person deletion
-10. GDPR/HIPAA privacy export returning a valid JSON ZIP archive
-
-### Step E: Run the Backend Server
-
-```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
+All 14 tests verify:
+1. `test_1_health`: Health check status
+2. `test_2_create_person`: Person creation with consent validation
+3. `test_3_ask_known_fact`: Grounded retrieval of stored memory
+4. `test_4_ask_unknown_fact`: Fallback message on unknown questions
+5. `test_5_delete_person`: Person deletion
+6. `test_6_transcribe_wav`: Faster-whisper WAV transcription
+7. `test_7_emergency_phrase_creates_alert_and_skips_llm`: Emergency keyword interception
+8. `test_8_reminder_fires_and_escalates`: Scheduling, polling, 5m repetition, and escalation
+9. `test_9_delete_person_removes_vectors_and_fails_recognition`: Vector purge & recognition failure
+10. `test_10_privacy_export_returns_zip`: GDPR/HIPAA ZIP archive export
+11. `test_11_dashboard_summary_numbers_match_seeded_logs`: 7-day adherence & daily report
+12. `test_12_demo_reset_restores_seed_state`: Demo reset endpoint (`/v1/demo/reset`)
+13. `test_13_health_endpoint_component_statuses`: Component checks (`mongo`, `ollama`, `face_model`, `whisper_model`)
+14. `test_14_timeout_and_fallback_prompt`: Timeout & ungrounded hallucination prevention
 
 ---
 
-## 3. Frontend Setup (Flutter)
-
-```bash
-cd frontend
-
-# Install Flutter packages
-flutter pub get
-
-# Run on Web (Chrome)
-flutter run -d chrome --dart-define=API_URL=http://localhost:8000/v1
-
-# Run on Android Device / Emulator
-flutter run -d android --dart-define=API_URL=http://10.0.2.2:8000/v1
-```
-
----
-
-## 4. API Endpoints Reference
+## API Endpoints Reference
 
 All endpoints are prefixed with `/v1` and return JSON:
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/health` | Health check & engine status |
+| `GET` | `/health` | Health check reporting status of Mongo, Ollama, Face, Whisper |
+| `GET` | `/dashboard/summary` | 7-day adherence %, weekly history, top questions, alert count |
+| `GET` | `/dashboard/daily-summary`| Factual daily activity summary for family caregivers |
+| `POST` | `/demo/reset` | Resets demo data (3 people, 10 memories, 2 reminders, 1 place) |
+| `POST` | `/demo/trigger-reminder`| Forces nearest reminder to trigger immediately for live demo |
 | `POST` | `/people` | Register person (`consent=true` required) |
 | `GET` | `/people` | List registered people & face count |
 | `POST` | `/people/{id}/faces` | Upload multipart face photo (rejects without consent) |
@@ -208,66 +189,32 @@ All endpoints are prefixed with `/v1` and return JSON:
 | `POST` | `/memories` | Create memory note (auto-embedded into FAISS) |
 | `GET` | `/memories` | List patient memories |
 | `POST` | `/ask` | Semantic retrieval + LLM answer / Emergency interception |
-| `POST` | `/voice/transcribe` | Multipart WAV/M4A audio transcription (faster-whisper small int8) |
+| `POST` | `/voice/transcribe` | Multipart audio transcription (faster-whisper small int8) |
 | `POST` | `/alerts/help` | SOS emergency trigger |
 | `GET` | `/alerts` | Caregiver alerts history feed |
 | `POST` | `/reminders` | Create reminder with optional iCal RRULE |
 | `GET` | `/reminders/upcoming` | List upcoming reminders |
-| `GET` | `/reminders/due` | Poll currently due/triggered reminders (polled every 15s) |
-| `PUT` | `/reminders/{id}` | Edit an existing reminder |
+| `GET` | `/reminders/due` | Poll currently due reminders (polled every 15s) |
+| `PUT` | `/reminders/{id}` | Edit a reminder |
 | `DELETE` | `/reminders/{id}` | Delete a reminder |
 | `POST` | `/reminders/{id}/respond` | Respond (`acknowledged`, `snoozed`, `distressed`) |
-| `GET` | `/privacy/export` | Download full personal data as a ZIP archive containing `export.json` |
+| `GET` | `/privacy/export` | Download full personal data as a ZIP archive (`export.json`) |
 | `DELETE` | `/privacy/all` | Wipe all patient records, faces, vectors, and audit logs |
 
 ---
 
-## 5. How to Test Voice and Reminders
-
-### Testing Voice Transcription
-1. **API Voice Transcribe**:
-   ```bash
-   curl -X POST "http://localhost:8000/v1/voice/transcribe" -F "file=@sample.wav"
-   ```
-   Returns `{ "text": "...", "language": "en", "confidence": 0.92, "needs_confirmation": false }`.
-2. **Emergency Voice / Text Interception**:
-   Send a query containing "help", "I fell", "bachao", or "madad":
-   ```bash
-   curl -X POST "http://localhost:8000/v1/ask" -H "Content-Type: application/json" -d "{\"text\": \"help me, I fell down!\", \"lang\": \"en\"}"
-   ```
-   Output skips the LLM immediately and replies:
-   `{"answer": "Help is coming. I am telling your family.", "grounded": true, "sources": []}`
-   and registers a new alert at `GET /v1/alerts`.
-3. **Flutter Push-to-Talk**:
-   - Open **Ask me anything** (`/ask`).
-   - Hold or tap the large microphone button to record 16kHz mono audio.
-   - If confidence is low, the prompt displays: `"Did you ask: ...?"` with `Yes` and `No` confirmation buttons.
-   - Text is spoken aloud using `flutter_tts` at rate 0.8 according to selected language (English: `en-IN`, Hindi: `hi-IN`, Punjabi: `pa-IN`).
-
-### Testing Reminders & Escalation
-1. **Caregiver Management**:
-   - Click the Admin / Caregiver icon in the top right AppBar of the Home screen (`/caregiver`).
-   - Create or edit reminders with custom time, repeat frequency (daily / weekly), and critical flag.
-2. **15-Second Polling & Due Card**:
-   - When a reminder's time arrives, `GET /v1/reminders/due` returns it to the Home screen.
-   - The Home screen automatically opens a full-screen alert dialog with large buttons: **Done**, **Later (Snooze 5 min)**, and **I need help**.
-   - Offline notifications are pre-scheduled with `flutter_local_notifications` for the upcoming 24 hours.
-3. **Escalation**:
-   - If a reminder is ignored, it repeats after 5 minutes.
-   - After `ESCALATE_AFTER_MIN` (default 10 min), its status becomes `escalated`, an alert is registered in `alerts`, and Twilio SMS is dispatched to the caregiver when `FEATURE_SMS=true`.
-
----
-
-## 6. Status of Features & Limitations
+## Status of Features & Limitations
 
 | Component | Status | Details |
 |---|---|---|
-| **FastAPI Backend** | Fully functional | All endpoints operational under `/v1` |
-| **Face Recognition** | Fully functional | InsightFace buffalo_l + FAISS IndexFlatIP |
+| **FastAPI Backend & Routers** | Fully functional | All endpoints operational under `/v1` |
+| **Caregiver Dashboard** | Fully functional | 7-day adherence, weekly bar chart, top questions, daily summary |
+| **Face Engine & FAISS** | Fully functional | InsightFace buffalo_l + normalized 512-d index |
 | **Memory Retrieval** | Fully functional | Multilingual SentenceTransformers + FAISS |
-| **Voice Transcription**| Fully functional | faster-whisper small int8 on CPU + VAD filter |
-| **Emergency Trigger** | Fully functional | Intercepts en/hi/pa keywords, notifies caregivers |
-| **Reminders & RRULE** | Fully functional | APScheduler + python-dateutil recurrence |
-| **Caregiver SMS** | Stubbed / Functional | Active when `FEATURE_SMS=true` with valid Twilio keys; logs warning stub otherwise |
+| **Voice Transcription** | Fully functional | faster-whisper small int8 on CPU + VAD filter |
+| **Demo Mode & Hidden Screen**| Fully functional | `/demo/reset`, `/demo/trigger-reminder`, long-press title dialog |
+| **Offline Caching** | Fully functional | Local reminders & people cache prevents blank screens |
+| **Emergency Alerts & SOS** | Fully functional | Intercepts keywords, creates alerts, informs family |
+| **Twilio Caregiver SMS** | Stubbed / Functional | Active when `FEATURE_SMS=true` with valid Twilio keys; logs warning otherwise |
 | **Push Notifications** | Stubbed | Active when `FEATURE_PUSH=true`; logs notification stub |
-| **TTS Punjabi Voice** | Device dependent | Mapped to `pa-IN`; falls back gracefully to display text if the Punjabi TTS engine is absent on the physical device |
+| **Punjabi TTS Voice** | Device dependent | Calls `pa-IN`; falls back gracefully to on-screen text display if device lacks Punjabi voice assets |

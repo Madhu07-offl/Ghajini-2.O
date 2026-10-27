@@ -254,8 +254,95 @@ class _RecognizeScreenState extends ConsumerState<RecognizeScreen> {
               label: const Text('Read out loud', style: TextStyle(fontSize: 22)),
             ),
 
+            // Uncertain Confirmation: "Is this Priya?" with Yes / No buttons
+            if (res.isUncertain && res.person != null) ...[
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.Border.all(color: AppTheme.accentAmber, width: 2),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      'Is this ${res.person!.name}?',
+                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.gentleGreen,
+                              minimumSize: const Size(0, 56),
+                            ),
+                            onPressed: () {
+                              tts.speak('Great, I have confirmed this is ${res.person!.name}.');
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Confirmed ${res.person!.name}', style: const TextStyle(fontSize: 18)),
+                                  backgroundColor: AppTheme.gentleGreen,
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.check, size: 28),
+                            label: const Text('Yes', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF6B7280),
+                              minimumSize: const Size(0, 56),
+                            ),
+                            onPressed: () {
+                              tts.speak('Understood. I will inform your family.');
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Noted. We will ask your family.', style: TextStyle(fontSize: 18)),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.close, size: 28),
+                            label: const Text('No', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            // Unknown Person: "I do not know this person yet" + Tell Caregiver button
             if (res.isUnknown) ...[
               const SizedBox(height: 16),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 64),
+                  backgroundColor: AppTheme.distressRed,
+                ),
+                onPressed: () async {
+                  await ref.read(apiServiceProvider).triggerSOSHelp(
+                    note: 'Unknown visitor at the door/camera.',
+                  );
+                  tts.speak('Your family has been told about this visitor.');
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Your family has been notified.', style: TextStyle(fontSize: 18)),
+                      backgroundColor: AppTheme.gentleGreen,
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.notifications_active, size: 28),
+                label: const Text('Tell Caregiver', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(height: 14),
               OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 64),

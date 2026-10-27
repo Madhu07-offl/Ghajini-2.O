@@ -1,0 +1,103 @@
+{
+  "enrolled_known_people": 3,
+  "total_enrolled_faces": 9,
+  "test_positive_samples": 6,
+  "test_unknown_samples": 4,
+  "suggested_thresholds": {
+    "FACE_T_HIGH": 0.2,
+    "FACE_T_LOW": 0.3
+  },
+  "threshold_sweep": [
+    {
+      "threshold": 0.2,
+      "true_accepts": 4,
+      "false_accepts": 6,
+      "TAR_pct": 66.7,
+      "FAR_pct": 150.0
+    },
+    {
+      "threshold": 0.24,
+      "true_accepts": 4,
+      "false_accepts": 6,
+      "TAR_pct": 66.7,
+      "FAR_pct": 150.0
+    },
+    {
+      "threshold": 0.28,
+      "true_accepts": 4,
+      "false_accepts": 6,
+      "TAR_pct": 66.7,
+      "FAR_pct": 150.0
+    },
+    {
+      "threshold": 0.32,
+      "true_accepts": 4,
+      "false_accepts": 6,
+      "TAR_pct": 66.7,
+      "FAR_pct": 150.0
+    },
+    {
+      "threshold": 0.36,
+      "true_accepts": 4,
+      "false_accepts": 6,
+      "TAR_pct": 66.7,
+      "FAR_pct": 150.0
+    },
+    {
+      "threshold": 0.4,
+      "true_accepts": 4,
+      "false_accepts": 6,
+      "TAR_pct": 66.7,
+      "FAR_pct": 150.0
+    },
+    {
+      "threshold": 0.44,
+      "true_accepts": 4,
+      "false_accepts": 6,
+      "TAR_pct": 66.7,
+      "FAR_pct": 150.0
+    },
+    {
+      "threshold": 0.48,
+      "true_accepts": 4,
+      "false_accepts": 6,
+      "TAR_pct": 66.7,
+      "FAR_pct": 150.0
+    },
+    {
+      "threshold": 0.52,
+      "true_accepts": 4,
+      "false_accepts": 6,
+      "TAR_pct": 66.7,
+      "FAR_pct": 150.0
+    },
+    {
+      "threshold": 0.56,
+      "true_accepts": 4,
+      "false_accepts": 6,
+      "TAR_pct": 66.7,
+      "FAR_pct": 150.0
+    },
+    {
+      "threshold": 0.6,
+      "true_accepts": 4,
+      "false_accepts": 6,
+      "TAR_pct": 66.7,
+      "FAR_pct": 150.0
+    },
+    {
+      "threshold": 0.64,
+      "true_accepts": 4,
+      "false_accepts": 6,
+      "TAR_pct": 66.7,
+      "FAR_pct": 150.0
+    },
+    {
+      "threshold": 0.68,
+      "true_accepts": 4,
+      "false_accepts": 6,
+      "TAR_pct": 66.7,
+      "FAR_pct": 150.0
+    }
+  ]
+}

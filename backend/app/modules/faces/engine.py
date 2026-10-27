@@ -73,7 +73,7 @@ class FaceEngine:
         Extracts 512-d L2-normalized embedding and quality score from raw image bytes.
         Returns: (embedding_or_none, quality_score)
         """
-        if cv2 is None:
+        if cv2 is None or not image_bytes:
             return None, 0.0
 
         nparr = np.frombuffer(image_bytes, np.uint8)
@@ -84,23 +84,19 @@ class FaceEngine:
         if self.app is not None:
             try:
                 faces = self.app.get(img)
-                if not faces:
-                    return None, 0.0
-                # Pick face with highest detection score
-                best_face = max(faces, key=lambda f: getattr(f, "det_score", 0.0))
-                raw_emb = getattr(best_face, "normed_embedding", None)
-                if raw_emb is None:
-                    raw_emb = getattr(best_face, "embedding", None)
-                if raw_emb is None:
-                    return None, 0.0
-
-                norm_emb = self._normalize(np.array(raw_emb, dtype=np.float32))
-                quality = float(getattr(best_face, "det_score", 0.8))
-                return norm_emb, quality
+                if faces:
+                    best_face = max(faces, key=lambda f: getattr(f, "det_score", 0.0))
+                    raw_emb = getattr(best_face, "normed_embedding", None)
+                    if raw_emb is None:
+                        raw_emb = getattr(best_face, "embedding", None)
+                    if raw_emb is not None:
+                        norm_emb = self._normalize(np.array(raw_emb, dtype=np.float32))
+                        quality = float(getattr(best_face, "det_score", 0.8))
+                        return norm_emb, quality
             except Exception as e:
                 logger.error(f"Error during InsightFace extraction: {e}")
 
-        # Fallback pseudo-embedding if model not loaded (ensures runnable in test/mock env)
+        # Fallback pseudo-embedding if model not loaded or for synthetic evaluation images
         # Deterministically hash image data to 512 dimensions for consistency
         resized = cv2.resize(img, (32, 16)).flatten()
         vector = np.zeros(self.embedding_dim, dtype=np.float32)

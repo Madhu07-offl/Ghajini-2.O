@@ -18,6 +18,7 @@ class Patient(Base):
     consents = orm_relationship("Consent", back_populates="patient", cascade="all, delete-orphan")
     alerts = orm_relationship("Alert", back_populates="patient", cascade="all, delete-orphan")
     audit_logs = orm_relationship("AuditLog", back_populates="patient", cascade="all, delete-orphan")
+    places = orm_relationship("Place", back_populates="patient", cascade="all, delete-orphan")
 
 
 class Person(Base):
@@ -134,3 +135,16 @@ class AuditLog(Base):
     timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     patient = orm_relationship("Patient", back_populates="audit_logs")
+
+
+class Place(Base):
+    __tablename__ = "places"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    patient_id = Column(Integer, ForeignKey("patients.id", ondelete="CASCADE"), nullable=False, default=1, index=True)
+    name = Column(String(120), nullable=False)
+    address = Column(String(255), nullable=False)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    patient = orm_relationship("Patient", back_populates="places")

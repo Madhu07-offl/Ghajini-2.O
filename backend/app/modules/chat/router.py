@@ -1,10 +1,11 @@
+from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.db.models import Memory
+from app.db.models import AuditLog, Memory
 from app.db.session import get_db
 from app.modules.alerts.service import notify_caregivers
 from app.modules.chat.llm_client import ollama_client
@@ -73,6 +74,19 @@ async def ask_memory(
         facts=facts,
         lang=requested_lang,
     )
+
+    # Record question in audit logs for Caregiver Dashboard analytics
+    try:
+        q_audit = AuditLog(
+            patient_id=pid,
+            action="ask_question",
+            details=payload.text.strip(),
+            timestamp=datetime.utcnow(),
+        )
+        db.add(q_audit)
+        db.commit()
+    except Exception:
+        pass
 
     return AskResponse(
         answer=answer,

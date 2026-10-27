@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     # Privacy controls
     STORE_PHOTOS: bool = False  # Do not store raw recognition photos unless true
 
+    # Demo Mode & MongoDB
+    DEMO_MODE: bool = True
+    MONGODB_URL: str = "mongodb://localhost:27017"
+
     # Reminder & Escalation settings
     ESCALATE_AFTER_MIN: int = 10
     QUIET_HOURS_START: int = 22  # 10:00 PM

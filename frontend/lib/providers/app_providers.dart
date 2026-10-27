@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ghajini_app/models/alert_model.dart';
+import 'package:ghajini_app/models/dashboard_summary.dart';
 import 'package:ghajini_app/models/person.dart';
 import 'package:ghajini_app/models/reminder.dart';
 import 'package:ghajini_app/services/api_service.dart';
@@ -38,4 +39,16 @@ final recentAlertsProvider = FutureProvider.autoDispose<List<AlertModel>>((ref) 
 final peopleListProvider = FutureProvider.autoDispose<List<Person>>((ref) async {
   final api = ref.watch(apiServiceProvider);
   return api.getPeople();
+});
+
+/// Fetches Caregiver Dashboard summary metrics
+final dashboardSummaryProvider = FutureProvider.autoDispose<DashboardSummary>((ref) async {
+  final api = ref.watch(apiServiceProvider);
+  return api.getDashboardSummary();
+});
+
+/// Fetches plain-English daily summary
+final dailySummaryProvider = FutureProvider.autoDispose<DailySummary>((ref) async {
+  final api = ref.watch(apiServiceProvider);
+  return api.getDailySummary();
 });
