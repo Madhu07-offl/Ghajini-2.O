@@ -195,8 +195,15 @@ class MongoManager:
 
         if HAS_MOTOR and AsyncIOMotorClient is not None:
             try:
-                client = AsyncIOMotorClient(settings.MONGODB_URL, serverSelectionTimeoutMS=1500)
-                await asyncio.wait_for(client.admin.command("ping"), timeout=1.5)
+                kwargs = {"serverSelectionTimeoutMS": 2500}
+                try:
+                    import certifi
+                    if "mongodb+srv://" in settings.MONGODB_URL:
+                        kwargs["tlsCAFile"] = certifi.where()
+                except ImportError:
+                    pass
+                client = AsyncIOMotorClient(settings.MONGODB_URL, **kwargs)
+                await asyncio.wait_for(client.admin.command("ping"), timeout=3.0)
                 self._motor_client = client
                 self._connected = True
                 logger.info(f"Connected to MongoDB via Motor at {settings.MONGODB_URL}")

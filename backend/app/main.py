@@ -141,8 +141,15 @@ async def health_check():
         # Check if live MongoDB has become available
         if HAS_MOTOR and AsyncIOMotorClient is not None:
             try:
-                test_client = AsyncIOMotorClient(settings.MONGODB_URL, serverSelectionTimeoutMS=500)
-                await asyncio.wait_for(test_client.admin.command("ping"), timeout=0.5)
+                kwargs = {"serverSelectionTimeoutMS": 1000}
+                try:
+                    import certifi
+                    if "mongodb+srv://" in settings.MONGODB_URL:
+                        kwargs["tlsCAFile"] = certifi.where()
+                except ImportError:
+                    pass
+                test_client = AsyncIOMotorClient(settings.MONGODB_URL, **kwargs)
+                await asyncio.wait_for(test_client.admin.command("ping"), timeout=1.5)
                 mongo_manager._motor_client = test_client
                 mongo_manager._connected = True
                 mongo_status = "connected"
