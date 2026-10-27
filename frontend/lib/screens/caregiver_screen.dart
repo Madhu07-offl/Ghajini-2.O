@@ -7,6 +7,7 @@ import 'package:ghajini_app/models/dashboard_summary.dart';
 import 'package:ghajini_app/models/person.dart';
 import 'package:ghajini_app/models/reminder.dart';
 import 'package:ghajini_app/providers/app_providers.dart';
+import 'package:ghajini_app/screens/calling_screen.dart';
 import 'package:ghajini_app/widgets/big_button.dart';
 import 'package:ghajini_app/widgets/person_card.dart';
 import 'package:ghajini_app/widgets/reminder_card.dart';
@@ -958,77 +959,361 @@ class _CaregiverScreenState extends ConsumerState<CaregiverScreen> {
     );
   }
 
-  // 5. Settings / Privacy Tab
+  // 5. Settings / Calling Agent & Privacy Tab
   Widget _buildSettingsTab(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Text(
-          'Privacy & Data Controls',
-          style: TextStyle(fontFamily: 'serif', fontSize: 26, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 16),
-        SectionCard(
-          child: Column(
+    final peopleAsync = ref.watch(peopleListProvider);
+    final selectedLang = ref.watch(languageProvider);
+
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Emergency Contacts & Calling Agent',
+            style: TextStyle(fontFamily: 'serif', fontSize: 26, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Configure prioritized contacts, automated SIM dialing, and free Telegram caregiver briefings.',
+            style: TextStyle(fontSize: 16, color: GhajiniTheme.mutedBrown),
+          ),
+          const SizedBox(height: 16),
+
+          // 1. Emergency Contacts Priority List
+          SectionCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Emergency Contacts', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                    StatusChip(label: 'SIM Calling Active', color: GhajiniTheme.successGreen),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'When an emergency trigger or escalation occurs, Ghajini calls Contact #1. If not answered, it seamlessly offers Contact #2.',
+                  style: TextStyle(fontSize: 16, color: GhajiniTheme.mutedBrown),
+                ),
+                const SizedBox(height: 16),
+                peopleAsync.when(
+                  data: (people) {
+                    final emergencies = people.where((p) => p.isEmergencyContact).toList()
+                      ..sort((a, b) => a.priority.compareTo(b.priority));
+                    if (emergencies.isEmpty) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12.0),
+                        child: Text(
+                          'No emergency contacts configured yet. Click "Manage Contacts" below to set priorities.',
+                          style: TextStyle(fontSize: 16, fontStyle: FontStyle.italic, color: GhajiniTheme.mutedBrown),
+                        ),
+                      );
+                    }
+                    return Column(
+                      children: emergencies.map((p) {
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: GhajiniTheme.softCream,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: GhajiniTheme.borderOrange),
+                          ),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                backgroundColor: GhajiniTheme.primaryOrange,
+                                radius: 18,
+                                child: Text('#${p.priority}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(p.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                    Text('${p.relationship} • ${p.phone ?? "+919876543210"}', style: const TextStyle(fontSize: 15, color: GhajiniTheme.mutedBrown)),
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.edit, color: GhajiniTheme.darkBrown),
+                                onPressed: () => _showEditEmergencyDialog(p),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    );
+                  },
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (e, _) => Text('Error loading contacts: $e'),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(0, 50),
+                          side: const BorderSide(color: GhajiniTheme.primaryOrange),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        icon: const Icon(Icons.contacts, color: GhajiniTheme.primaryOrange),
+                        label: const Text('Manage Contacts', style: TextStyle(fontSize: 16, color: GhajiniTheme.darkBrown, fontWeight: FontWeight.bold)),
+                        onPressed: () {
+                          final people = peopleAsync.value ?? [];
+                          if (people.isNotEmpty) {
+                            _showEditEmergencyDialog(people.first);
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: GhajiniTheme.successGreen,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(0, 50),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        icon: const Icon(Icons.phone_in_talk, size: 20),
+                        label: const Text('Test Call Flow', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const CallingScreen(
+                                reason: 'Caregiver settings call test',
+                                source: 'manual',
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // 2. Telegram Caregiver Briefing Channel
+          SectionCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Telegram Caregiver Alerts', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                    StatusChip(label: 'Free Channel', color: GhajiniTheme.primaryOrange),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Sends immediate 3-line incident briefings to the caregiver on Telegram using the free Bot API. Never blocks the phone call.',
+                  style: TextStyle(fontSize: 16, color: GhajiniTheme.mutedBrown),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    const Text('Briefing Language:', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                    const SizedBox(width: 16),
+                    DropdownButton<String>(
+                      value: selectedLang,
+                      items: const [
+                        DropdownMenuItem(value: 'en', child: Text('English (en)')),
+                        DropdownMenuItem(value: 'hi', child: Text('Hindi (हिन्दी)')),
+                        DropdownMenuItem(value: 'pa', child: Text('Punjabi (ਪੰਜਾਬੀ)')),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          ref.read(languageProvider.notifier).state = val;
+                        }
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                BigButton(
+                  text: 'Send Test Alert (No Phone Call)',
+                  icon: Icons.send_rounded,
+                  backgroundColor: GhajiniTheme.primaryOrange,
+                  textColor: Colors.white,
+                  onPressed: () async {
+                    try {
+                      final res = await ref.read(apiServiceProvider).sendTestAlert(lang: selectedLang);
+                      if (!context.mounted) return;
+                      final detail = res['detail'] ?? 'Sent';
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Test alert: $detail'),
+                          backgroundColor: res['success'] == true ? GhajiniTheme.successGreen : GhajiniTheme.darkBrown,
+                        ),
+                      );
+                    } catch (e) {
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Test alert error: $e'), backgroundColor: GhajiniTheme.emergencyRed),
+                      );
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // 3. Privacy & Data Export
+          SectionCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Data Export & Portability', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                const Text(
+                  'Download all stored memories, contacts, reminder adherence, and conversation logs in a structured ZIP archive.',
+                  style: TextStyle(fontSize: 16, color: GhajiniTheme.mutedBrown),
+                ),
+                const SizedBox(height: 16),
+                BigButton(
+                  text: 'Export All Patient Data',
+                  icon: Icons.download_rounded,
+                  backgroundColor: GhajiniTheme.darkBrown,
+                  textColor: Colors.white,
+                  onPressed: () async {
+                    try {
+                      final bytes = await ref.read(apiServiceProvider).exportData();
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Exported ${bytes.length} bytes archive successfully!'),
+                          backgroundColor: GhajiniTheme.successGreen,
+                        ),
+                      );
+                    } catch (e) {
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Could not export data.'), backgroundColor: GhajiniTheme.emergencyRed),
+                      );
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // 4. Wipe Data
+          SectionCard(
+            borderColor: GhajiniTheme.emergencyRed,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Right to be Forgotten', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: GhajiniTheme.emergencyRed)),
+                const SizedBox(height: 8),
+                const Text(
+                  'Wipes all face vectors, personal memories, logs, and audio transcripts permanently for this patient.',
+                  style: TextStyle(fontSize: 16, color: GhajiniTheme.mutedBrown),
+                ),
+                const SizedBox(height: 16),
+                BigButton(
+                  text: 'Wipe Patient Data',
+                  icon: Icons.delete_forever,
+                  backgroundColor: GhajiniTheme.emergencyRed,
+                  textColor: Colors.white,
+                  onPressed: () => _handleWipeData(context),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 40),
+        ],
+      ),
+    );
+  }
+
+  void _showEditEmergencyDialog(Person person) {
+    final phoneController = TextEditingController(text: person.phone ?? '+919876543210');
+    bool isEmergency = person.isEmergencyContact;
+    int priority = person.priority;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: GhajiniTheme.softCream,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(
+            'Emergency Settings: ${person.name}',
+            style: const TextStyle(fontFamily: 'serif', fontSize: 22, fontWeight: FontWeight.bold),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Data Export & Portability', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              const Text(
-                'Download all stored memories, contacts, reminder adherence, and conversation logs in a structured ZIP archive.',
-                style: TextStyle(fontSize: 18, color: GhajiniTheme.mutedBrown),
-              ),
-              const SizedBox(height: 16),
-              BigButton(
-                text: 'Export All Patient Data',
-                icon: Icons.download_rounded,
-                backgroundColor: GhajiniTheme.primaryOrange,
-                textColor: Colors.white,
-                onPressed: () async {
-                  try {
-                    final bytes = await ref.read(apiServiceProvider).exportData();
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Exported ${bytes.length} bytes archive successfully!'),
-                        backgroundColor: GhajiniTheme.successGreen,
-                      ),
-                    );
-                  } catch (e) {
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Could not export data.'), backgroundColor: GhajiniTheme.emergencyRed),
-                    );
-                  }
+              CheckboxListTile(
+                title: const Text('Designate as Emergency Contact', style: TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: const Text('Eligible for automated SIM calling & alerts'),
+                value: isEmergency,
+                activeColor: GhajiniTheme.successGreen,
+                onChanged: (val) {
+                  setDialogState(() => isEmergency = val ?? false);
                 },
               ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-        SectionCard(
-          borderColor: GhajiniTheme.emergencyRed,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Right to be Forgotten', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: GhajiniTheme.emergencyRed)),
-              const SizedBox(height: 8),
-              const Text(
-                'Wipes all face vectors, personal memories, logs, and audio transcripts permanently for this patient.',
-                style: TextStyle(fontSize: 18, color: GhajiniTheme.mutedBrown),
+              const SizedBox(height: 12),
+              TextField(
+                controller: phoneController,
+                keyboardType: TextInputType.phone,
+                decoration: InputDecoration(
+                  labelText: 'Phone Number (with Country Code)',
+                  hintText: '+919876543210',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  prefixIcon: const Icon(Icons.phone),
+                ),
               ),
               const SizedBox(height: 16),
-              BigButton(
-                text: 'Wipe Patient Data',
-                icon: Icons.delete_forever,
-                backgroundColor: GhajiniTheme.emergencyRed,
-                textColor: Colors.white,
-                onPressed: () => _handleWipeData(context),
+              Row(
+                children: [
+                  const Text('Calling Priority: ', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const SizedBox(width: 12),
+                  DropdownButton<int>(
+                    value: priority,
+                    items: const [
+                      DropdownMenuItem(value: 1, child: Text('Priority #1 (First call)')),
+                      DropdownMenuItem(value: 2, child: Text('Priority #2 (Fallback call)')),
+                      DropdownMenuItem(value: 3, child: Text('Priority #3')),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) setDialogState(() => priority = val);
+                    },
+                  ),
+                ],
               ),
             ],
           ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: GhajiniTheme.primaryOrange, foregroundColor: Colors.white),
+              onPressed: () async {
+                await ref.read(apiServiceProvider).updatePersonEmergency(
+                  personId: person.id,
+                  isEmergencyContact: isEmergency,
+                  phone: phoneController.text.trim(),
+                  priority: priority,
+                );
+                ref.invalidate(peopleListProvider);
+                if (ctx.mounted) Navigator.pop(ctx);
+              },
+              child: const Text('Save Settings'),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 

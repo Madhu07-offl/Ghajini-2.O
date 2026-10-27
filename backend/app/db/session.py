@@ -45,6 +45,15 @@ def init_db() -> None:
             if logs_cols:
                 if "outcome" not in logs_cols:
                     conn.exec_driver_sql("ALTER TABLE reminder_logs ADD COLUMN outcome VARCHAR(40) DEFAULT 'ignored'")
+
+            people_cols = [row[1] for row in conn.exec_driver_sql("PRAGMA table_info(people)").fetchall()]
+            if people_cols:
+                if "phone" not in people_cols:
+                    conn.exec_driver_sql("ALTER TABLE people ADD COLUMN phone VARCHAR(50)")
+                if "is_emergency_contact" not in people_cols:
+                    conn.exec_driver_sql("ALTER TABLE people ADD COLUMN is_emergency_contact BOOLEAN DEFAULT 0")
+                if "priority" not in people_cols:
+                    conn.exec_driver_sql("ALTER TABLE people ADD COLUMN priority INTEGER DEFAULT 1")
             conn.commit()
     except Exception:
         pass
@@ -57,5 +66,21 @@ def init_db() -> None:
             patient = models.Patient(id=settings.DEFAULT_PATIENT_ID, name="Default Patient")
             db.add(patient)
             db.commit()
+
+        # Ensure demo emergency contacts are populated
+        priya = db.query(models.Person).filter(models.Person.name == "Priya").first()
+        if priya:
+            if not priya.phone:
+                priya.phone = "+919876543210"
+            priya.is_emergency_contact = True
+            priya.priority = 1
+
+        arun = db.query(models.Person).filter(models.Person.name == "Arun").first()
+        if arun:
+            if not arun.phone:
+                arun.phone = "+919876543211"
+            arun.is_emergency_contact = True
+            arun.priority = 2
+        db.commit()
     finally:
         db.close()

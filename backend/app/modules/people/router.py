@@ -18,6 +18,9 @@ router = APIRouter()
 class PersonCreate(BaseModel):
     name: str
     relationship: str
+    phone: Optional[str] = None
+    is_emergency_contact: Optional[bool] = False
+    priority: Optional[int] = 1
     notes: Optional[str] = None
     consent: bool
     patient_id: Optional[int] = None
@@ -28,11 +31,20 @@ class PersonResponse(BaseModel):
     patient_id: int
     name: str
     relationship: str
+    phone: Optional[str] = None
+    is_emergency_contact: bool = False
+    priority: int = 1
     notes: Optional[str] = None
     created_at: datetime
     faces_count: int = 0
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class EmergencyContactUpdate(BaseModel):
+    phone: Optional[str] = None
+    is_emergency_contact: bool
+    priority: Optional[int] = 1
 
 
 class RecognizeResponse(BaseModel):
@@ -55,6 +67,9 @@ def create_person(payload: PersonCreate, db: Session = Depends(get_db)):
         patient_id=pid,
         name=payload.name.strip(),
         relationship=payload.relationship.strip(),
+        phone=payload.phone.strip() if payload.phone else None,
+        is_emergency_contact=payload.is_emergency_contact or False,
+        priority=payload.priority or 1,
         notes=payload.notes.strip() if payload.notes else None,
     )
     db.add(person)
@@ -84,6 +99,9 @@ def create_person(payload: PersonCreate, db: Session = Depends(get_db)):
         patient_id=person.patient_id,
         name=person.name,
         relationship=person.relationship,
+        phone=person.phone,
+        is_emergency_contact=person.is_emergency_contact or False,
+        priority=person.priority or 1,
         notes=person.notes,
         created_at=person.created_at,
         faces_count=0,
@@ -109,12 +127,45 @@ def list_people(
                 patient_id=p.patient_id,
                 name=p.name,
                 relationship=p.relationship,
+                phone=p.phone,
+                is_emergency_contact=p.is_emergency_contact or False,
+                priority=p.priority or 1,
                 notes=p.notes,
                 created_at=p.created_at,
                 faces_count=len(p.faces),
             )
         )
     return results
+
+
+@router.put("/{person_id}/emergency", response_model=PersonResponse)
+def update_emergency_contact(
+    person_id: int,
+    payload: EmergencyContactUpdate,
+    db: Session = Depends(get_db),
+):
+    person = db.query(Person).filter(Person.id == person_id).first()
+    if not person:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Person not found")
+    if payload.phone is not None:
+        person.phone = payload.phone.strip()
+    person.is_emergency_contact = payload.is_emergency_contact
+    if payload.priority is not None:
+        person.priority = payload.priority
+    db.commit()
+    db.refresh(person)
+    return PersonResponse(
+        id=person.id,
+        patient_id=person.patient_id,
+        name=person.name,
+        relationship=person.relationship,
+        phone=person.phone,
+        is_emergency_contact=person.is_emergency_contact or False,
+        priority=person.priority or 1,
+        notes=person.notes,
+        created_at=person.created_at,
+        faces_count=len(person.faces),
+    )
 
 
 @router.post("/{person_id}/faces")

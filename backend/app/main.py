@@ -14,6 +14,7 @@ from app.db.models import Memory, PersonFace
 from app.db.mongo import HAS_MOTOR, AsyncIOMotorClient, mongo_manager
 from app.db.session import SessionLocal, init_db
 from app.modules.alerts.router import router as alerts_router
+from app.modules.calls.router import router as calls_router
 from app.modules.chat.llm_client import ollama_client
 from app.modules.chat.router import router as chat_router
 from app.modules.companion.router import router as companion_router
@@ -134,32 +135,30 @@ async def health_check():
     # 2. MongoDB / Document Store check
     mongo_status = "connected"
     mongo_engine = "embedded document engine"
-    if mongo_manager._connected:
-        mongo_status = "connected"
-        mongo_engine = "motor"
-    else:
-        # Check if live MongoDB has become available
-        if HAS_MOTOR and AsyncIOMotorClient is not None:
-            try:
-                kwargs = {"serverSelectionTimeoutMS": 1000}
-                try:
-                    import certifi
-                    if "mongodb+srv://" in settings.MONGODB_URL:
-                        kwargs["tlsCAFile"] = certifi.where()
-                except ImportError:
-                    pass
-                test_client = AsyncIOMotorClient(settings.MONGODB_URL, **kwargs)
-                await asyncio.wait_for(test_client.admin.command("ping"), timeout=1.5)
-                mongo_manager._motor_client = test_client
-                mongo_manager._connected = True
-                mongo_status = "connected"
-                mongo_engine = "motor"
-            except Exception:
-                mongo_status = "connected"
-                mongo_engine = "embedded document engine"
-        else:
+    if not os.environ.get("PYTEST_CURRENT_TEST") and not os.environ.get("TESTING"):
+        if mongo_manager._connected:
             mongo_status = "connected"
-            mongo_engine = "embedded document engine"
+            mongo_engine = "motor"
+        else:
+            # Check if live MongoDB has become available
+            if HAS_MOTOR and AsyncIOMotorClient is not None:
+                try:
+                    kwargs = {"serverSelectionTimeoutMS": 1000}
+                    try:
+                        import certifi
+                        if "mongodb+srv://" in settings.MONGODB_URL:
+                            kwargs["tlsCAFile"] = certifi.where()
+                    except ImportError:
+                        pass
+                    test_client = AsyncIOMotorClient(settings.MONGODB_URL, **kwargs)
+                    await asyncio.wait_for(test_client.admin.command("ping"), timeout=1.5)
+                    mongo_manager._motor_client = test_client
+                    mongo_manager._connected = True
+                    mongo_status = "connected"
+                    mongo_engine = "motor"
+                except Exception:
+                    mongo_status = "connected"
+                    mongo_engine = "embedded document engine"
 
     # 3. Ollama check
     ollama_status = "unavailable"
@@ -209,4 +208,5 @@ app.include_router(reminders_router, prefix=f"{v1_prefix}/reminders", tags=["rem
 app.include_router(privacy_router, prefix=f"{v1_prefix}/privacy", tags=["privacy"])
 app.include_router(dashboard_router, prefix=f"{v1_prefix}/dashboard", tags=["dashboard"])
 app.include_router(companion_router, prefix=f"{v1_prefix}/companion", tags=["companion"])
+app.include_router(calls_router, prefix=f"{v1_prefix}/calls", tags=["calls"])
 app.include_router(demo_router, prefix=f"{v1_prefix}/demo", tags=["demo"])

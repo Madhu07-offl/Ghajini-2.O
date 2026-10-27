@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ghajini_app/core/theme.dart';
 import 'package:ghajini_app/providers/app_providers.dart';
+import 'package:ghajini_app/screens/calling_screen.dart';
 import 'package:ghajini_app/services/tts_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -148,27 +149,25 @@ class _CompanionScreenState extends ConsumerState<CompanionScreen> {
   }
 
   void _callFamily() async {
-    final uri = Uri.parse("tel:+919876543210");
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    }
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const CallingScreen(
+          reason: "Patient asked companion to call family",
+          source: "companion",
+        ),
+      ),
+    );
   }
 
   void _triggerSos() async {
-    try {
-      final api = ref.read(apiServiceProvider);
-      await api.triggerEmergencyHelp(note: "SOS Button pressed on Companion Screen");
-      if (mounted) {
-        setState(() {
-          _lastMessage = _selectedLang == 'hi'
-              ? "मदद आ रही है। आपके परिवार को बता दिया गया है।"
-              : (_selectedLang == 'pa'
-                  ? "ਮਦਦ ਆ ਰਹੀ ਹੈ। ਤੁਹਾਡੇ ਪਰਿਵਾਰ ਨੂੰ ਦੱਸ ਦਿੱਤਾ ਗਿਆ ਹੈ।"
-                  : "Help is coming. Your family has been notified.");
-        });
-        _speak(_lastMessage);
-      }
-    } catch (_) {}
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const CallingScreen(
+          reason: "SOS Button pressed on Companion Screen",
+          source: "sos",
+        ),
+      ),
+    );
   }
 
   void _showEmergencyAlertBanner() {

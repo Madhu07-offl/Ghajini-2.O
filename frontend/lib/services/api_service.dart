@@ -428,4 +428,90 @@ class ApiService {
       },
     );
   }
+
+  /// Calling Agent: Request a call from patient's phone
+  Future<Map<String, dynamic>> requestCall({
+    required String reason,
+    required String source,
+    int patientId = 1,
+    String lang = 'en',
+    int contactIndex = 0,
+  }) async {
+    final res = await _dio.post(
+      '/calls/request',
+      data: {
+        'patient_id': patientId,
+        'reason': reason,
+        'source': source,
+        'lang': lang,
+        'contact_index': contactIndex,
+      },
+    );
+    return res.data as Map<String, dynamic>;
+  }
+
+  /// Calling Agent: Report call result (answered / not_answered / cancelled)
+  Future<Map<String, dynamic>> reportCallResult({
+    required String callId,
+    required String status,
+    String? note,
+  }) async {
+    final res = await _dio.post(
+      '/calls/$callId/result',
+      data: {
+        'status': status,
+        'note': note,
+      },
+    );
+    return res.data as Map<String, dynamic>;
+  }
+
+  /// Calling Agent: Send test alert
+  Future<Map<String, dynamic>> sendTestAlert({
+    int patientId = 1,
+    String? botToken,
+    String? chatId,
+    String lang = 'en',
+  }) async {
+    final res = await _dio.post(
+      '/calls/test-alert',
+      data: {
+        'patient_id': patientId,
+        'bot_token': botToken,
+        'chat_id': chatId,
+        'lang': lang,
+      },
+    );
+    return res.data as Map<String, dynamic>;
+  }
+
+  /// Calling Agent: Fetch call history
+  Future<List<dynamic>> getCallHistory({
+    int patientId = 1,
+    int limit = 20,
+  }) async {
+    final res = await _dio.get(
+      '/calls/history',
+      queryParameters: {'patient_id': patientId, 'limit': limit},
+    );
+    return res.data as List<dynamic>;
+  }
+
+  /// Update person emergency contact status
+  Future<Map<String, dynamic>> updatePersonEmergency({
+    required int personId,
+    required bool isEmergencyContact,
+    String? phone,
+    int priority = 1,
+  }) async {
+    final res = await _dio.put(
+      '/people/$personId/emergency',
+      data: {
+        'is_emergency_contact': isEmergencyContact,
+        'phone': phone,
+        'priority': priority,
+      },
+    );
+    return res.data as Map<String, dynamic>;
+  }
 }

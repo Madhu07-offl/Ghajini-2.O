@@ -33,6 +33,23 @@ class Settings(BaseSettings):
     TWILIO_FROM_NUMBER: str = ""
     CAREGIVER_PHONE: str = "+919876543210"
 
+    # LLM Provider Switch (Ollama / OpenRouter Free Tier)
+    LLM_PROVIDER: str = "ollama"  # "ollama" | "openrouter"
+    OPENROUTER_API_KEY: str = ""
+    OPENROUTER_MODEL: str = "meta-llama/llama-3.2-3b-instruct:free"
+
+    # Caregiver Telegram Briefing Channel
+    FEATURE_TELEGRAM: bool = False
+    TELEGRAM_BOT_TOKEN: str = ""
+    TELEGRAM_CHAT_ID: str = ""
+
+    # Optional Video Room
+    VIDEO_LINK_BASE_URL: str = ""  # e.g. "https://meet.jit.si"
+
+    # Call Limits
+    CALL_MAX_PER_HOUR: int = 3
+    CALL_COOLDOWN_SECONDS: int = 120  # 2 minutes
+
     # Privacy controls
     STORE_PHOTOS: bool = False  # Do not store raw recognition photos unless true
 

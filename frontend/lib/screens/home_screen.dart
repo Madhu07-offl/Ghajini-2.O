@@ -12,6 +12,7 @@ import 'package:ghajini_app/core/responsive.dart';
 import 'package:ghajini_app/core/theme.dart';
 import 'package:ghajini_app/models/reminder.dart';
 import 'package:ghajini_app/providers/app_providers.dart';
+import 'package:ghajini_app/screens/calling_screen.dart';
 import 'package:ghajini_app/widgets/big_button.dart';
 import 'package:ghajini_app/widgets/reminder_popup.dart';
 import 'package:ghajini_app/widgets/sos_button.dart';
@@ -139,13 +140,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Future<void> _handleSOS() async {
-    try {
-      final api = ref.read(apiServiceProvider);
-      await api.triggerEmergencyHelp(note: 'SOS Button pressed on Home Screen');
-      _showSOSConfirmedDialog();
-    } catch (_) {
-      _showSOSConfirmedDialog();
-    }
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const CallingScreen(
+          reason: "SOS Button pressed on Home Screen",
+          source: "sos",
+        ),
+      ),
+    );
   }
 
   void _showSOSConfirmedDialog() {
@@ -192,6 +194,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Future<void> _callFamily() async {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const CallingScreen(
+          reason: "Patient asked to call family",
+          source: "call_family",
+        ),
+      ),
+    );
+  }
     final Uri telUri = Uri(scheme: 'tel', path: _emergencyContactNumber);
     try {
       if (await canLaunchUrl(telUri)) {

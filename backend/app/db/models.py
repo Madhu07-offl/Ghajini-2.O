@@ -28,6 +28,9 @@ class Person(Base):
     patient_id = Column(Integer, ForeignKey("patients.id", ondelete="CASCADE"), nullable=False, default=1, index=True)
     name = Column(String(120), nullable=False)
     relationship = Column(String(80), nullable=False)
+    phone = Column(String(50), nullable=True)
+    is_emergency_contact = Column(Boolean, default=False, nullable=False)
+    priority = Column(Integer, default=1, nullable=False)
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 

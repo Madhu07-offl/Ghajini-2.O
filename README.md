@@ -268,6 +268,108 @@ The Patient AI Companion is an elderly-friendly, empathetic conversational assis
 | **Demo Mode & Hidden Screen**| Fully functional | `/demo/reset`, `/demo/trigger-reminder`, long-press title dialog |
 | **Offline Caching** | Fully functional | Local reminders & people cache prevents blank screens |
 | **Emergency Alerts & SOS** | Fully functional | Intercepts keywords, creates alerts, informs family |
-| **Twilio Caregiver SMS** | Stubbed / Functional | Active when `FEATURE_SMS=true` with valid Twilio keys; logs warning otherwise |
+| **Free Calling Agent** | Fully functional | Rules-based SIM calling (`flutter_phone_direct_caller`), Telegram briefing, OpenRouter/Ollama wording |
+| **Twilio Caregiver SMS** | Stubbed / Optional | Active when `FEATURE_SMS=true` with valid Twilio keys; replaced by free Telegram bot |
 | **Push Notifications** | Stubbed | Active when `FEATURE_PUSH=true`; logs notification stub |
 | **Punjabi TTS Voice** | Device dependent | Calls `pa-IN`; falls back gracefully to on-screen text display if device lacks Punjabi voice assets |
+
+---
+
+## Free Calling Agent Setup & Testing Guide
+
+Ghajini 2.0 features a completely **free, zero-telephony-cost Calling Agent**. It does NOT require Twilio, cloud SIP trunks, or paid telephony subscriptions. Instead, it triggers native SIM phone calls directly from the patient's phone and delivers instant 3-line incident briefings to the caregiver via Telegram.
+
+### 1. How It Works
+1. **Rule-Based Decision**: Calls are triggered strictly by safety rules (never by an LLM):
+   - SOS button pressed on Home or Companion screen.
+   - Emergency voice phrase detected ("help", "madad", "fell", "bachao").
+   - Critical medication reminder unacknowledged after `escalate_after_min`.
+   - 2 missed check-ins.
+2. **Safety Throttling**:
+   - **Cooldown**: 2 minutes (120s) between call attempts.
+   - **Hourly Limit**: Maximum 3 call attempts per hour per patient.
+   - **Quiet Hours**: During 10:00 PM – 6:00 AM, routine calls are suppressed; only emergencies (`sos`, `emergency_phrase`) trigger calls.
+3. **Contact Escalation**:
+   - Contacts are evaluated in priority order (`is_emergency_contact == True`, sorted by `priority asc`).
+   - If Contact #1 does not answer, the app asks *"Did Priya answer?"* and immediately offers Contact #2.
+4. **Free AI Wording**:
+   - A free model writes: (a) a soothing single-sentence patient reassurance message spoken via TTS, and (b) a 3-line caregiver briefing.
+   - Supports local **Ollama** (`llama3.2:3b`) or **OpenRouter Free Tier** (models ending in `:free`).
+   - **Privacy Guardrail**: If using OpenRouter, all patient and caregiver names and phone numbers are replaced with `[PATIENT]` and `[CAREGIVER]` before transmission and restored locally. Guaranteed fallback templates are used if the LLM is unavailable or hallucinates.
+
+---
+
+### 2. Setting Up Free Telegram Caregiver Alerts
+
+1. **Create a Bot via BotFather**:
+   - Open Telegram and search for `@BotFather`.
+   - Send `/newbot`, choose a name (e.g., `GhajiniCaregiverBot`) and username (e.g., `my_ghajini_alert_bot`).
+   - BotFather will give you a token like `7823456789:ABCdefGhIJKlmNoPQRstuVWxYz`.
+2. **Get Your Telegram Chat ID**:
+   - In Telegram, open your new bot and click **Start** (or send `/start`).
+   - Search for `@userinfobot` on Telegram and send `/start`. It will reply with your numeric `Id` (e.g., `123456789`).
+3. **Configure `.env`**:
+   ```env
+   FEATURE_TELEGRAM=true
+   TELEGRAM_BOT_TOKEN="7823456789:ABCdefGhIJKlmNoPQRstuVWxYz"
+   TELEGRAM_CHAT_ID="123456789"
+   ```
+4. **Test Without Placing a Call**:
+   - In the Caregiver Portal under **Settings**, click **"Send Test Alert (No Phone Call)"** to verify instant Telegram delivery.
+
+---
+
+### 3. Choosing the LLM Provider (`ollama` vs `openrouter`)
+
+- **Default (Local Ollama)**:
+  ```env
+  LLM_PROVIDER="ollama"
+  OLLAMA_BASE_URL="http://localhost:11434"
+  OLLAMA_MODEL="llama3.2:3b"
+  ```
+- **Optional Free Cloud (OpenRouter)**:
+  1. Get a free API key at [openrouter.ai](https://openrouter.ai/keys).
+  2. In `.env`:
+     ```env
+     LLM_PROVIDER="openrouter"
+     OPENROUTER_API_KEY="sk-or-v1-..."
+     OPENROUTER_MODEL="meta-llama/llama-3.2-3b-instruct:free"
+     ```
+  *(Note: Model ID must end with `:free`. Rate limit retries at most once, then uses fixed template fallbacks).*
+
+---
+
+### 4. Testing Calls on a Real Android Phone with a SIM
+
+1. Connect your Android phone with USB debugging enabled:
+   ```bash
+   flutter devices
+   ```
+2. Run on device:
+   ```bash
+   cd frontend
+   flutter run -d <device_id>
+   ```
+3. Tap **SOS** or **Call Family** on the Home screen:
+   - The app asks for the `CALL_PHONE` permission on first use.
+   - Speaks the soothing reassurance: *"I am calling Priya for you. Please stay right here."*
+   - Shows a calm 5-second countdown window with a Cancel button.
+   - Directly places the SIM phone call to the caregiver's number using `flutter_phone_direct_caller`.
+   - When you return to the app, it prompts: *"Did Priya answer?"* with big Yes / No buttons. If No, it offers Contact #2.
+
+---
+
+### 5. What Works, What is Stubbed, and Limits
+
+- **What Works**:
+  - Direct native SIM calling on Android (`CALL_PHONE`).
+  - Native iOS phone dialer confirmation (`tel:` URL scheme).
+  - Web & desktop browser graceful fallback card (large phone display, Copy button, and Open Dialer button; never crashes).
+  - Deterministic safety policy (max 3 calls/hour, 2-minute cool-down, quiet-hours suppression).
+  - OpenRouter PII sanitization and desanitization.
+  - Multi-tier emergency contact escalation (#1 Priya -> #2 Arun).
+  - Free Telegram Bot API caregiver briefings.
+- **Limits**:
+  - **No Direct Calls on Web**: Web browsers cannot place direct cellular phone calls due to browser sandbox security; Ghajini provides a high-contrast card with an instant "Copy Number" and "Open Dialer" button.
+  - **SIM Minutes**: Calls use the SIM card carrier's native minutes on the patient's phone; zero paid cloud telephony APIs are required.
+  - **Video Room**: Public Jitsi rooms now require moderator authentication; `VIDEO_LINK_BASE_URL` is an optional setting and not required for core calling.
