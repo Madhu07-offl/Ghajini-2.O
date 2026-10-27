@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 import re
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
@@ -223,7 +224,7 @@ class CompanionService:
         self.model = settings.OLLAMA_MODEL
         self.temperature = 0.2
         self.max_tokens = 120
-        self.timeout = 15.0
+        self.timeout = 1.0 if (os.environ.get("TESTING") or os.environ.get("PYTEST_CURRENT_TEST")) else settings.OLLAMA_TIMEOUT_SECONDS
 
     async def get_patient_settings(self, patient_id: int) -> Dict[str, Any]:
         coll = mongo_manager.get_collection("companion_settings")

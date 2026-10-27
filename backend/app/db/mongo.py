@@ -3,6 +3,7 @@ import copy
 import json
 import logging
 import os
+import threading
 import time
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
@@ -77,7 +78,7 @@ class AsyncDocumentCollection:
         self.name = name
         self._storage_path = os.path.join(storage_dir or settings.DATA_DIR, f"mongo_{name}.json")
         self._docs: List[Dict[str, Any]] = []
-        self._lock = asyncio.Lock()
+        self._lock = threading.Lock()
         self._load()
 
     def _load(self) -> None:
@@ -124,7 +125,7 @@ class AsyncDocumentCollection:
         return True
 
     async def insert_one(self, document: Dict[str, Any]) -> InsertOneResult:
-        async with self._lock:
+        with self._lock:
             doc = copy.deepcopy(document)
             if "_id" not in doc:
                 doc["_id"] = f"{self.name}_{int(time.time() * 1000)}_{len(self._docs) + 1}"
@@ -133,7 +134,7 @@ class AsyncDocumentCollection:
             return InsertOneResult(doc["_id"])
 
     async def find_one(self, filter: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
-        async with self._lock:
+        with self._lock:
             filter = filter or {}
             for doc in self._docs:
                 if self._matches(doc, filter):
@@ -146,7 +147,7 @@ class AsyncDocumentCollection:
         return AsyncCursor(matched)
 
     async def update_one(self, filter: Dict[str, Any], update: Dict[str, Any]) -> UpdateResult:
-        async with self._lock:
+        with self._lock:
             matched = 0
             modified = 0
             for doc in self._docs:
@@ -166,7 +167,7 @@ class AsyncDocumentCollection:
             return UpdateResult(matched, modified)
 
     async def delete_many(self, filter: Dict[str, Any]) -> int:
-        async with self._lock:
+        with self._lock:
             before_len = len(self._docs)
             self._docs = [d for d in self._docs if not self._matches(d, filter)]
             deleted = before_len - len(self._docs)
@@ -175,7 +176,7 @@ class AsyncDocumentCollection:
             return deleted
 
     async def count_documents(self, filter: Optional[Dict[str, Any]] = None) -> int:
-        async with self._lock:
+        with self._lock:
             filter = filter or {}
             return sum(1 for d in self._docs if self._matches(d, filter))
 
@@ -188,6 +189,10 @@ class MongoManager:
         self._connected = False
 
     async def init(self) -> None:
+        if os.environ.get("TESTING") or os.environ.get("PYTEST_CURRENT_TEST"):
+            self._connected = False
+            return
+
         if HAS_MOTOR and AsyncIOMotorClient is not None:
             try:
                 u = urlparse(settings.MONGODB_URL)

@@ -34,14 +34,17 @@ class VoiceTranscriber:
             # First try loading if already cached locally
             self.model = WhisperModel(self.model_name, device="cpu", compute_type="int8", local_files_only=True)
             logger.info(f"faster-whisper '{self.model_name}' (int8, CPU) loaded from local cache.")
-        except Exception:
-            try:
-                # If not cached, attempt download
-                self.model = WhisperModel(self.model_name, device="cpu", compute_type="int8")
-                logger.info(f"faster-whisper '{self.model_name}' (int8, CPU) loaded successfully.")
-            except Exception as e:
-                logger.warning(f"Could not load faster-whisper model ({e}). Using mock/fallback transcription.")
+        except Exception as e:
+            if os.environ.get("HF_HUB_OFFLINE") == "1" or os.environ.get("TESTING"):
+                logger.info("Offline mode: faster-whisper remote download skipped, fallback transcription enabled.")
                 self.model = None
+            else:
+                try:
+                    self.model = WhisperModel(self.model_name, device="cpu", compute_type="int8")
+                    logger.info(f"faster-whisper '{self.model_name}' (int8, CPU) loaded successfully.")
+                except Exception as ex:
+                    logger.warning(f"Could not load faster-whisper model ({ex}). Using mock/fallback transcription.")
+                    self.model = None
 
     def transcribe_audio(self, audio_bytes: bytes, filename: str = "audio.wav") -> Dict[str, object]:
         """

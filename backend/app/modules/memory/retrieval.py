@@ -39,11 +39,15 @@ class MemoryRetrieval:
     def _init_model(self) -> None:
         if SentenceTransformer is not None:
             try:
-                self.model = SentenceTransformer(self.model_name)
-                logger.info(f"Loaded memory sentence transformer: {self.model_name}")
-            except Exception as e:
-                logger.warning(f"Could not load SentenceTransformer ({self.model_name}): {e}. Using deterministic fallback.")
-                self.model = None
+                self.model = SentenceTransformer(self.model_name, local_files_only=True)
+                logger.info(f"Loaded memory sentence transformer: {self.model_name} (local)")
+            except Exception:
+                try:
+                    self.model = SentenceTransformer(self.model_name)
+                    logger.info(f"Loaded memory sentence transformer: {self.model_name}")
+                except Exception as e:
+                    logger.warning(f"Could not load SentenceTransformer ({self.model_name}): {e}. Using deterministic fallback.")
+                    self.model = None
 
     def _normalize(self, vector: np.ndarray) -> np.ndarray:
         norm = np.linalg.norm(vector)

@@ -11,7 +11,7 @@ class TtsService {
     'pa': 'pa-IN',
   };
 
-  Future<void> _init() async {
+  Future<void> init() async {
     if (_initialized) return;
     try {
       // Speech rate 0.8 as specified in Phase 2 requirements
@@ -27,7 +27,7 @@ class TtsService {
   Future<void> speak(String text, {String lang = 'en'}) async {
     if (text.isEmpty) return;
     try {
-      await _init();
+      await init();
       final locale = langLocaleMap[lang.toLowerCase().substring(0, 2)] ?? 'en-IN';
 
       // Check if locale voice is supported; if not, do not crash

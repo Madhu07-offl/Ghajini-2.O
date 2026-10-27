@@ -1,13 +1,20 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+import 'package:ghajini_app/core/responsive.dart';
 import 'package:ghajini_app/core/theme.dart';
 import 'package:ghajini_app/models/reminder.dart';
 import 'package:ghajini_app/providers/app_providers.dart';
+import 'package:ghajini_app/widgets/big_button.dart';
+import 'package:ghajini_app/widgets/reminder_popup.dart';
+import 'package:ghajini_app/widgets/sos_button.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -19,13 +26,16 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   Timer? _duePollTimer;
   final Set<int> _activePromptReminderIds = {};
-  final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
+  FlutterLocalNotificationsPlugin? _notificationsPlugin;
+  static const String _emergencyContactNumber = "+919876543210";
 
   @override
   void initState() {
     super.initState();
-    _initLocalNotifications();
-    // Poll /v1/reminders/due every 15 seconds
+    if (!kIsWeb) {
+      _initLocalNotifications();
+    }
+    // Poll /v1/reminders/due every 15 seconds across both mobile and web
     _duePollTimer = Timer.periodic(const Duration(seconds: 15), (_) => _checkDueReminders());
     WidgetsBinding.instance.addPostFrameCallback((_) => _checkDueReminders());
   }
@@ -38,17 +48,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Future<void> _initLocalNotifications() async {
     try {
+      _notificationsPlugin = FlutterLocalNotificationsPlugin();
       const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
       const initSettings = InitializationSettings(android: androidInit);
-      await _notificationsPlugin.initialize(initSettings);
+      await _notificationsPlugin?.initialize(initSettings);
     } catch (e) {
-      debugPrint('Local notifications init note: $e');
+      debugPrint('Local notifications init note (native only): $e');
     }
   }
 
   Future<void> _scheduleOfflineNotifications(List<Reminder> reminders) async {
+    if (kIsWeb || _notificationsPlugin == null) return;
     try {
-      // Schedule local notifications for the next 24 h
       for (final rem in reminders) {
         final parts = rem.scheduledTime.split(':');
         if (parts.length >= 2) {
@@ -60,8 +71,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             priority: Priority.high,
           );
           const details = NotificationDetails(android: androidDetails);
-          // Show test banner notification locally
-          await _notificationsPlugin.show(
+          await _notificationsPlugin?.show(
             rem.id,
             rem.title,
             rem.message ?? 'Time for your daily scheduled reminder.',
@@ -98,248 +108,201 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) {
-        return Dialog.fullscreen(
-          child: Container(
-            color: const Color(0xFFFFF9E6),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            child: SafeArea(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Icon(
-                    Icons.notifications_active_rounded,
-                    color: AppTheme.accentAmber,
-                    size: 90,
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Time for your reminder',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.amber.shade900,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    reminder.title,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  if (reminder.message != null && reminder.message!.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      reminder.message!,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 24, color: Colors.black87),
-                    ),
-                  ],
-                  const SizedBox(height: 40),
-
-                  // Button 1: Done (Acknowledged)
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.gentleGreen,
-                      minimumSize: const Size(double.infinity, 76),
-                    ),
-                    onPressed: () async {
-                      await ref
-                          .read(apiServiceProvider)
-                          .respondToReminder(reminderId: reminder.id, response: 'acknowledged');
-                      _activePromptReminderIds.remove(reminder.id);
-                      ref.invalidate(upcomingRemindersProvider);
-                      if (mounted) Navigator.of(ctx).pop();
-                    },
-                    icon: const Icon(Icons.check_circle, size: 36),
-                    label: const Text('Done (I took it)', style: TextStyle(fontSize: 24)),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Button 2: Later (Snooze 5 min)
-                  OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 72),
-                      side: const BorderSide(color: Colors.black87, width: 2.5),
-                    ),
-                    onPressed: () async {
-                      await ref
-                          .read(apiServiceProvider)
-                          .respondToReminder(reminderId: reminder.id, response: 'snoozed');
-                      _activePromptReminderIds.remove(reminder.id);
-                      ref.invalidate(upcomingRemindersProvider);
-                      if (mounted) Navigator.of(ctx).pop();
-                    },
-                    icon: const Icon(Icons.snooze, size: 32, color: Colors.black87),
-                    label: const Text('Later (Remind in 5m)', style: TextStyle(fontSize: 22, color: Colors.black87)),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Button 3: I need help (Distressed)
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.distressRed,
-                      minimumSize: const Size(double.infinity, 72),
-                    ),
-                    onPressed: () async {
-                      await ref
-                          .read(apiServiceProvider)
-                          .respondToReminder(reminderId: reminder.id, response: 'distressed');
-                      _activePromptReminderIds.remove(reminder.id);
-                      ref.invalidate(upcomingRemindersProvider);
-                      if (mounted) {
-                        Navigator.of(ctx).pop();
-                        _showSOSConfirmationDialog();
-                      }
-                    },
-                    icon: const Icon(Icons.warning, size: 32),
-                    label: const Text('I need help', style: TextStyle(fontSize: 22)),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
+      builder: (ctx) => ReminderPopupDialog(
+        reminder: reminder,
+        onDone: () async {
+          Navigator.of(ctx).pop();
+          _activePromptReminderIds.remove(reminder.id);
+          try {
+            await ref.read(apiServiceProvider).respondToReminder(reminder.id, 'acknowledged');
+            ref.invalidate(upcomingRemindersProvider);
+          } catch (_) {}
+        },
+        onLater: () async {
+          Navigator.of(ctx).pop();
+          _activePromptReminderIds.remove(reminder.id);
+          try {
+            await ref.read(apiServiceProvider).respondToReminder(reminder.id, 'snoozed');
+            ref.invalidate(upcomingRemindersProvider);
+          } catch (_) {}
+        },
+        onNeedHelp: () async {
+          Navigator.of(ctx).pop();
+          _activePromptReminderIds.remove(reminder.id);
+          try {
+            await ref.read(apiServiceProvider).respondToReminder(reminder.id, 'distressed');
+            _showSOSConfirmedDialog();
+          } catch (_) {}
+        },
+      ),
     );
   }
 
   Future<void> _handleSOS() async {
-    final tts = ref.read(ttsServiceProvider);
-    tts.speak("Emergency help requested. Your family has been told.");
-
     try {
-      await ref.read(apiServiceProvider).triggerSOSHelp();
-    } catch (_) {}
-
-    _showSOSConfirmationDialog();
+      final api = ref.read(apiServiceProvider);
+      await api.triggerEmergencyHelp(note: 'SOS Button pressed on Home Screen');
+      _showSOSConfirmedDialog();
+    } catch (_) {
+      _showSOSConfirmedDialog();
+    }
   }
 
-  void _showSOSConfirmationDialog() {
+  void _showSOSConfirmedDialog() {
+    final tts = ref.read(ttsServiceProvider);
+    tts.speak("Help is coming. Your family has been told.");
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: GhajiniTheme.cardWhite,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(GhajiniTheme.cardRadius),
+          side: const BorderSide(color: GhajiniTheme.emergencyRed, width: 2.5),
+        ),
         title: const Row(
           children: [
-            Icon(Icons.shield_rounded, color: AppTheme.gentleGreen, size: 36),
+            Icon(Icons.warning_amber_rounded, color: GhajiniTheme.emergencyRed, size: 36),
             SizedBox(width: 12),
-            Text('SOS Alert Sent', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            Expanded(
+              child: Text(
+                'Help is coming',
+                style: TextStyle(fontFamily: 'serif', fontSize: 24, fontWeight: FontWeight.bold, color: GhajiniTheme.darkBrown),
+              ),
+            ),
           ],
         ),
         content: const Text(
-          'Your family has been told.\nHelp is on the way. Stay calm.',
-          style: TextStyle(fontSize: 22, height: 1.4),
+          'Your family has been told.\nSomeone will contact or visit you right away.',
+          style: TextStyle(fontSize: 20, color: GhajiniTheme.darkBrown, height: 1.4),
         ),
         actions: [
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryDark,
-              minimumSize: const Size(120, 60),
+              backgroundColor: GhajiniTheme.emergencyRed,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(double.infinity, 56),
             ),
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('OK', style: TextStyle(fontSize: 20)),
+            child: const Text('OK', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
     );
   }
 
-  void _showDemoToolsDialog() {
-    final tts = ref.read(ttsServiceProvider);
-    final api = ref.read(apiServiceProvider);
+  Future<void> _callFamily() async {
+    final Uri telUri = Uri(scheme: 'tel', path: _emergencyContactNumber);
+    try {
+      if (await canLaunchUrl(telUri)) {
+        await launchUrl(telUri);
+        return;
+      }
+    } catch (_) {}
 
+    // Web / Desktop Fallback: Dialog with Copy Number
+    if (mounted) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text("Emergency Phone Dialer", style: TextStyle(fontFamily: 'serif', fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text("Caregiver Contact Number:", style: TextStyle(fontSize: 16)),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: GhajiniTheme.softCream,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: GhajiniTheme.borderLight),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      _emergencyContactNumber,
+                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: GhajiniTheme.darkBrown),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.copy, color: GhajiniTheme.primaryOrange),
+                      onPressed: () {
+                        Clipboard.setData(const ClipboardData(text: _emergencyContactNumber));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Phone number copied to clipboard.")),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text("CLOSE", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  void _showDemoToolsDialog() {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Row(
-          children: const [
-            Icon(Icons.build_circle, color: AppTheme.accentAmber, size: 30),
-            SizedBox(width: 10),
-            Text('Hidden Demo Tools', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-          ],
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Demo Tools', style: TextStyle(fontFamily: 'serif', fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'Quick actions for live demonstration:',
-              style: TextStyle(fontSize: 18, color: Colors.black87),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E3A8A), minimumSize: const Size(0, 56)),
-              onPressed: () async {
-                Navigator.pop(ctx);
+            ListTile(
+              leading: const Icon(Icons.restore, color: GhajiniTheme.primaryOrange),
+              title: const Text('Reset Demo Data', style: TextStyle(fontWeight: FontWeight.bold)),
+              onTap: () async {
+                Navigator.of(ctx).pop();
                 try {
-                  final res = await api.resetDemoData();
+                  await ref.read(apiServiceProvider).resetDemoData();
                   ref.invalidate(upcomingRemindersProvider);
-                  ref.invalidate(dueRemindersProvider);
-                  ref.invalidate(peopleListProvider);
-                  if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Demo reset: ${res["message"] ?? "Done"}', style: const TextStyle(fontSize: 18)),
-                      backgroundColor: AppTheme.gentleGreen,
-                    ),
-                  );
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Demo data reset to pristine state.')),
+                    );
+                  }
                 } catch (e) {
-                  if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Could not reset demo data.', style: TextStyle(fontSize: 18)), backgroundColor: AppTheme.distressRed),
-                  );
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Reset failed: $e')));
+                  }
                 }
               },
-              icon: const Icon(Icons.restart_alt, size: 26),
-              label: const Text('Reset Demo Data', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             ),
-            const SizedBox(height: 12),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.gentleGreen, minimumSize: const Size(0, 56)),
-              onPressed: () async {
-                Navigator.pop(ctx);
+            ListTile(
+              leading: const Icon(Icons.alarm, color: GhajiniTheme.successGreen),
+              title: const Text('Trigger Reminder Now', style: TextStyle(fontWeight: FontWeight.bold)),
+              onTap: () async {
+                Navigator.of(ctx).pop();
                 try {
-                  await api.triggerReminderNow();
+                  await ref.read(apiServiceProvider).triggerReminderNow();
                   await _checkDueReminders();
-                } catch (_) {}
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Trigger failed: $e')));
+                  }
+                }
               },
-              icon: const Icon(Icons.alarm_on, size: 26),
-              label: const Text('Trigger Reminder Now', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             ),
-            const SizedBox(height: 12),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.distressRed, minimumSize: const Size(0, 56)),
-              onPressed: () async {
-                Navigator.pop(ctx);
+            ListTile(
+              leading: const Icon(Icons.warning, color: GhajiniTheme.emergencyRed),
+              title: const Text('Trigger SOS Alert', style: TextStyle(fontWeight: FontWeight.bold)),
+              onTap: () {
+                Navigator.of(ctx).pop();
                 _handleSOS();
               },
-              icon: const Icon(Icons.sos, size: 26),
-              label: const Text('Trigger SOS Alert', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(minimumSize: const Size(0, 56), side: const BorderSide(color: AppTheme.primaryDark, width: 2)),
-              onPressed: () {
-                final current = ref.read(currentLanguageProvider);
-                final next = current == 'en' ? 'hi' : (current == 'hi' ? 'pa' : 'en');
-                ref.read(currentLanguageProvider.notifier).state = next;
-                Navigator.pop(ctx);
-                final langName = next == 'en' ? 'English' : (next == 'hi' ? 'Hindi' : 'Punjabi');
-                tts.speak('Language changed to $langName');
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Language: $langName', style: const TextStyle(fontSize: 18)), backgroundColor: AppTheme.primaryDark),
-                );
-              },
-              icon: const Icon(Icons.translate, size: 26),
-              label: const Text('Switch Language', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -347,249 +310,300 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Future<void> _callFamily() async {
-    final Uri telUri = Uri(scheme: 'tel', path: '+919876543210');
-    try {
-      if (await canLaunchUrl(telUri)) {
-        await launchUrl(telUri);
-      }
-    } catch (_) {}
-  }
-
   @override
   Widget build(BuildContext context) {
     final remindersAsync = ref.watch(upcomingRemindersProvider);
+    final isWide = Responsive.isWide(context);
+    final now = DateTime.now();
+    final dateStr = DateFormat('EEEE, d MMMM y').format(now);
+    final timeStr = DateFormat('h:mm a').format(now);
 
     return Scaffold(
+      backgroundColor: GhajiniTheme.softCream,
       appBar: AppBar(
         title: GestureDetector(
           onLongPress: _showDemoToolsDialog,
           child: const Text(
-            'Ghajini Companion',
-            style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+            'Ghajini 2.0',
+            style: TextStyle(fontFamily: 'serif', fontSize: 24, fontWeight: FontWeight.bold),
           ),
         ),
-        backgroundColor: AppTheme.primaryDark,
-        foregroundColor: Colors.white,
         actions: [
+          // On wide screens, put SOS right in the header for instant access
+          if (isWide) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+              child: SosButton(onPressed: _handleSOS, isHeaderStyle: true),
+            ),
+            const SizedBox(width: 8),
+          ],
           IconButton(
-            icon: const Icon(Icons.analytics_outlined, size: 30),
+            icon: const Icon(Icons.analytics_outlined, size: 28),
             tooltip: 'Caregiver Dashboard',
             onPressed: () => context.push('/dashboard'),
           ),
           IconButton(
-            icon: const Icon(Icons.admin_panel_settings, size: 30),
+            icon: const Icon(Icons.admin_panel_settings_outlined, size: 28),
             tooltip: 'Caregiver Portal',
             onPressed: () => context.push('/caregiver'),
           ),
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Greeting Card
-              Card(
-                color: Colors.white,
-                elevation: 3,
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.wb_sunny_rounded,
-                        color: AppTheme.accentAmber,
-                        size: 48,
+        child: ResponsivePatientContainer(
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // 1. Warm Greeting Card with Date & Time
+                Card(
+                  color: GhajiniTheme.cardWhite,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(GhajiniTheme.cardRadius),
+                    side: const BorderSide(color: GhajiniTheme.borderLight, width: 1.5),
+                  ),
+                  elevation: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.all(22),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 64,
+                          height: 64,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: GhajiniTheme.softCream,
+                          ),
+                          child: const Icon(Icons.wb_sunny_rounded, color: GhajiniTheme.primaryOrange, size: 40),
+                        ),
+                        const SizedBox(width: 18),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Good Day!",
+                                style: const TextStyle(
+                                  fontFamily: 'serif',
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                  color: GhajiniTheme.darkBrown,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                "$dateStr • $timeStr",
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: GhajiniTheme.primaryOrange,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              const Text(
+                                "I am here to help you remember everything.",
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  color: GhajiniTheme.mutedBrown,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // 2. SOS Button (Compact full width; on wide it's also in the header)
+                if (!isWide) ...[
+                  SosButton(onPressed: _handleSOS),
+                  const SizedBox(height: 16),
+                ],
+
+                // 3. Next Due Reminder Card
+                remindersAsync.when(
+                  data: (reminders) {
+                    _scheduleOfflineNotifications(reminders);
+                    final active = reminders.where((r) => r.status != 'acknowledged').toList();
+                    if (active.isEmpty) {
+                      return Card(
+                        color: GhajiniTheme.cardWhite,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(GhajiniTheme.cardRadius),
+                          side: const BorderSide(color: GhajiniTheme.borderLight, width: 1.5),
+                        ),
+                        child: const Padding(
+                          padding: EdgeInsets.all(20),
+                          child: Row(
+                            children: [
+                              Icon(Icons.check_circle_outline, color: GhajiniTheme.successGreen, size: 36),
+                              SizedBox(width: 16),
+                              Expanded(
+                                child: Text(
+                                  'All caught up! No pending reminders today.',
+                                  style: TextStyle(
+                                    fontSize: 19,
+                                    fontWeight: FontWeight.bold,
+                                    color: GhajiniTheme.successGreen,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+                    final nextRem = active.first;
+                    return Card(
+                      color: GhajiniTheme.cardWhite,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(GhajiniTheme.cardRadius),
+                        side: BorderSide(
+                          color: nextRem.isCritical ? GhajiniTheme.emergencyRed : GhajiniTheme.primaryOrange,
+                          width: 2,
+                        ),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'Hello!',
-                              style: Theme.of(context).textTheme.headlineMedium,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'I am here to help you remember everything today.',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: Colors.black87,
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // SOS Emergency Button - ALWAYS VISIBLE ON HOME
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 84),
-                  backgroundColor: AppTheme.distressRed,
-                  elevation: 6,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                    side: const BorderSide(color: Colors.white, width: 3),
-                  ),
-                ),
-                onPressed: _handleSOS,
-                icon: const Icon(Icons.sos_rounded, size: 48, color: Colors.white),
-                label: const Text(
-                  'SOS HELP',
-                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, letterSpacing: 1.5),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // Next Reminder Banner
-              remindersAsync.when(
-                data: (reminders) {
-                  _scheduleOfflineNotifications(reminders);
-                  final active = reminders.where((r) => r.status != 'acknowledged').toList();
-                  if (active.isEmpty) {
-                    return Card(
-                      color: const Color(0xFFE8F5E9),
-                      child: Padding(
-                        padding: const EdgeInsets.all(18),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.check_circle_outline, color: AppTheme.gentleGreen, size: 34),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Text(
-                                'All caught up! No pending reminders.',
-                                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                      color: AppTheme.gentleGreen,
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.access_time_filled, color: GhajiniTheme.primaryOrange, size: 24),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      "NEXT REMINDER: ${nextRem.scheduledTime}",
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w800,
+                                        color: GhajiniTheme.primaryOrange,
+                                        letterSpacing: 0.5,
+                                      ),
                                     ),
+                                  ],
+                                ),
+                                if (nextRem.isCritical)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: GhajiniTheme.emergencyBg,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: const Text("CRITICAL", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: GhajiniTheme.emergencyRed)),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              nextRem.title,
+                              style: const TextStyle(
+                                fontFamily: 'serif',
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: GhajiniTheme.darkBrown,
                               ),
                             ),
+                            if (nextRem.message != null && nextRem.message!.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                nextRem.message!,
+                                style: const TextStyle(fontSize: 17, color: GhajiniTheme.mutedBrown),
+                              ),
+                            ],
                           ],
                         ),
                       ),
                     );
-                  }
-                  final nextRem = active.first;
-                  return _buildUpcomingBanner(nextRem);
-                },
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (_, __) => const SizedBox.shrink(),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Button 1: Who is this?
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 76),
-                  backgroundColor: AppTheme.primaryDark,
+                  },
+                  loading: () => const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator())),
+                  error: (_, __) => const SizedBox.shrink(),
                 ),
-                onPressed: () => context.push('/recognize'),
-                icon: const Icon(Icons.face_retouching_natural, size: 36),
-                label: const Text(
-                  'Who is this?',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                ),
-              ),
+                const SizedBox(height: 20),
 
-              const SizedBox(height: 16),
-
-              // Button: Talk to Ghajini (AI Companion)
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 80),
-                  backgroundColor: const Color(0xFF1E3A8A),
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                onPressed: () => context.push('/companion'),
-                icon: const Text('🤖', style: TextStyle(fontSize: 32)),
-                label: const Text(
-                  'Talk to Ghajini (Companion)',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Button 2: Ask me anything
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 76),
-                  backgroundColor: const Color(0xFF1E3A8A),
-                ),
-                onPressed: () => context.push('/ask'),
-                icon: const Icon(Icons.mic, size: 36),
-                label: const Text(
-                  'Ask me anything',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Button 3: Call family (Opens dialer with tel: protocol)
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 76),
-                  backgroundColor: const Color(0xFF374151),
-                ),
-                onPressed: _callFamily,
-                icon: const Icon(Icons.phone_in_talk, size: 36),
-                label: const Text(
-                  'Call family',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildUpcomingBanner(Reminder reminder) {
-    return Card(
-      color: const Color(0xFFFFF9E6),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: const BorderSide(color: AppTheme.accentAmber, width: 2),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.alarm, color: AppTheme.accentAmber, size: 28),
-                const SizedBox(width: 10),
-                Text(
-                  'Next Reminder at ${reminder.scheduledTime}',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF944E00),
-                  ),
+                // 4. Action Buttons (Responsive: Stack on compact, 2-column grid on wide)
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    if (isWide) {
+                      // 2-column grid on tablets and desktop
+                      return GridView.count(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        childAspectRatio: 2.8,
+                        children: [
+                          BigButton(
+                            label: "Talk to Ghajini",
+                            icon: const Text('🤖', style: TextStyle(fontSize: 28)),
+                            onPressed: () => context.push('/companion'),
+                            backgroundColor: GhajiniTheme.primaryOrange,
+                          ),
+                          BigButton(
+                            label: "Who is this?",
+                            icon: const Icon(Icons.face_retouching_natural, size: 30, color: Colors.white),
+                            onPressed: () => context.push('/recognize'),
+                            backgroundColor: GhajiniTheme.darkBrown,
+                          ),
+                          BigButton(
+                            label: "Ask memory",
+                            icon: const Icon(Icons.mic, size: 30, color: Colors.white),
+                            onPressed: () => context.push('/ask'),
+                            backgroundColor: const Color(0xFF9A3412),
+                          ),
+                          BigButton(
+                            label: "Call family",
+                            icon: const Icon(Icons.phone, size: 30, color: Colors.white),
+                            onPressed: _callFamily,
+                            backgroundColor: const Color(0xFF0F172A),
+                          ),
+                        ],
+                      );
+                    } else {
+                      // Single column stacked buttons on mobile phones
+                      return Column(
+                        children: [
+                          BigButton(
+                            label: "Talk to Ghajini (Companion)",
+                            icon: const Text('🤖', style: TextStyle(fontSize: 28)),
+                            onPressed: () => context.push('/companion'),
+                            backgroundColor: GhajiniTheme.primaryOrange,
+                          ),
+                          const SizedBox(height: 14),
+                          BigButton(
+                            label: "Who is this?",
+                            icon: const Icon(Icons.face_retouching_natural, size: 30, color: Colors.white),
+                            onPressed: () => context.push('/recognize'),
+                            backgroundColor: GhajiniTheme.darkBrown,
+                          ),
+                          const SizedBox(height: 14),
+                          BigButton(
+                            label: "Ask me anything",
+                            icon: const Icon(Icons.mic, size: 30, color: Colors.white),
+                            onPressed: () => context.push('/ask'),
+                            backgroundColor: const Color(0xFF9A3412),
+                          ),
+                          const SizedBox(height: 14),
+                          BigButton(
+                            label: "Call family",
+                            icon: const Icon(Icons.phone, size: 30, color: Colors.white),
+                            onPressed: _callFamily,
+                            backgroundColor: const Color(0xFF0F172A),
+                          ),
+                        ],
+                      );
+                    }
+                  },
                 ),
               ],
             ),
-            const SizedBox(height: 10),
-            Text(
-              reminder.title,
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-          ],
+          ),
         ),
       ),
     );

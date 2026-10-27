@@ -1,13 +1,23 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:record/record.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:ghajini_app/core/localization.dart';
+import 'package:ghajini_app/core/responsive.dart';
 import 'package:ghajini_app/core/theme.dart';
 import 'package:ghajini_app/models/memory.dart';
 import 'package:ghajini_app/providers/app_providers.dart';
+import 'package:ghajini_app/widgets/big_button.dart';
+import 'package:ghajini_app/widgets/friendly_error.dart';
+import 'package:ghajini_app/widgets/section_card.dart';
+import 'package:ghajini_app/widgets/sos_button.dart';
+import 'package:ghajini_app/widgets/status_chip.dart';
+import 'package:ghajini_app/widgets/voice_orb.dart';
 
+/// Elderly-friendly, responsive screen for Memory Q&A with VoiceOrb.
+/// Zero dart:io imports, fully cross-platform (Web, Android, iOS, Tablet, Desktop).
 class AskScreen extends ConsumerStatefulWidget {
   const AskScreen({super.key});
 
@@ -51,30 +61,24 @@ class _AskScreenState extends ConsumerState<AskScreen> {
           _needsConfirmation = false;
         });
 
-        // Record 16 kHz mono wav as required
-        String recordPath = '';
-        if (!kIsWeb) {
-          final tempDir = Directory.systemTemp;
-          recordPath = '${tempDir.path}/ghajini_record_${DateTime.now().millisecondsSinceEpoch}.wav';
-        }
-
+        // 16 kHz mono wav as per specification
         await _audioRecorder.start(
           const RecordConfig(
             encoder: AudioEncoder.wav,
             sampleRate: 16000,
             numChannels: 1,
           ),
-          path: recordPath,
+          path: kIsWeb ? '' : 'ghajini_voice_temp.wav',
         );
       } else {
         setState(() {
-          _errorMessage = "Microphone access is needed to listen to you.";
+          _errorMessage = "Microphone access is needed to listen. You can also type your question.";
         });
       }
     } catch (e) {
       setState(() {
         _isRecording = false;
-        _errorMessage = "Could not start microphone. Please try again or type.";
+        _errorMessage = "Could not start microphone on this device. Please type your question.";
       });
     }
   }
@@ -88,8 +92,11 @@ class _AskScreenState extends ConsumerState<AskScreen> {
       });
 
       if (path != null && path.isNotEmpty) {
+        final xfile = XFile(path);
+        final bytes = await xfile.readAsBytes();
+
         final api = ref.read(apiServiceProvider);
-        final result = await api.transcribeVoice(path);
+        final result = await api.transcribeVoiceBytes(bytes, filename: 'voice.wav');
 
         final text = (result['text'] as String?)?.trim() ?? '';
         final needsConf = result['needs_confirmation'] as bool? ?? false;
@@ -118,8 +125,16 @@ class _AskScreenState extends ConsumerState<AskScreen> {
       setState(() {
         _isRecording = false;
         _isTranscribing = false;
-        _errorMessage = "I had trouble hearing you. Would you like to try again or ask your family?";
+        _errorMessage = "I had trouble hearing your voice. Please try again or type below.";
       });
+    }
+  }
+
+  void _toggleRecording() {
+    if (_isRecording) {
+      _stopRecordingAndTranscribe();
+    } else {
+      _startRecording();
     }
   }
 
@@ -142,11 +157,12 @@ class _AskScreenState extends ConsumerState<AskScreen> {
       final res = await api.askQuestion(text: text, lang: currentLang).timeout(
         const Duration(seconds: 15),
         onTimeout: () => AskResponseModel(
-          answer: "I am not sure. Shall I call your family?",
+          answer: AppStrings.get(currentLang, 'notSure'),
           grounded: false,
           sources: [],
         ),
       );
+
       if (mounted) {
         setState(() {
           _response = res;
@@ -160,7 +176,7 @@ class _AskScreenState extends ConsumerState<AskScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _errorMessage = "I am not sure. Shall I call your family?";
+          _errorMessage = AppStrings.get(currentLang, 'notSure');
         });
       }
     }
@@ -171,30 +187,77 @@ class _AskScreenState extends ConsumerState<AskScreen> {
     try {
       if (await canLaunchUrl(telUri)) {
         await launchUrl(telUri);
+      } else {
+        _showCopyPhoneDialog();
       }
-    } catch (_) {}
+    } catch (_) {
+      _showCopyPhoneDialog();
+    }
+  }
+
+  void _showCopyPhoneDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: GhajiniTheme.softCream,
+        title: const Text('Call Family', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Caregiver phone number:', style: TextStyle(fontSize: 18)),
+            SizedBox(height: 8),
+            SelectableText(
+              '+91 98765 43210',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: GhajiniTheme.primaryOrange),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close', style: TextStyle(fontSize: 18)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final currentLang = ref.watch(currentLanguageProvider);
     final tts = ref.watch(ttsServiceProvider);
+    final isWide = Responsive.isWide(context);
 
     return Scaffold(
+      backgroundColor: GhajiniTheme.softCream,
       appBar: AppBar(
-        title: const Text('Ask Memory'),
-        backgroundColor: AppTheme.primaryDark,
+        title: Text(
+          AppStrings.get(currentLang, 'askGhajini'),
+          style: const TextStyle(
+            fontFamily: 'serif',
+            fontSize: 26,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        backgroundColor: GhajiniTheme.primaryOrange,
         foregroundColor: Colors.white,
+        elevation: 2,
         actions: [
           // Language selector
           Padding(
-            padding: const EdgeInsets.only(right: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 10),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
                 value: currentLang,
-                dropdownColor: AppTheme.primaryDark,
-                style: const TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
+                dropdownColor: GhajiniTheme.darkBrown,
                 icon: const Icon(Icons.language, color: Colors.white),
+                style: const TextStyle(
+                  fontSize: 18,
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
                 items: languages.map((lang) {
                   return DropdownMenuItem<String>(
                     value: lang['code'],
@@ -209,121 +272,126 @@ class _AskScreenState extends ConsumerState<AskScreen> {
               ),
             ),
           ),
+          if (isWide)
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: CompactSosButton(
+                onPressed: () => ref.read(apiServiceProvider).triggerSOSHelp(
+                  note: 'SOS triggered from Ask Memory screen',
+                ),
+              ),
+            ),
         ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'How can I help you today?',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 26),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'Hold the microphone button to speak, or type below.',
-                style: TextStyle(fontSize: 20, color: Colors.black54),
-              ),
-              const SizedBox(height: 24),
+          padding: Responsive.screenPadding(context),
+          child: ResponsivePatientContainer(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Prompt Header
+                Text(
+                  'How can I help you today?',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Tap the big microphone to talk, or write below.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: GhajiniTheme.mutedBrown,
+                  ),
+                ),
+                const SizedBox(height: 28),
 
-              // Big Push-To-Talk Mic Button
-              Center(
-                child: GestureDetector(
-                  onTapDown: (_) => _startRecording(),
-                  onTapUp: (_) => _stopRecordingAndTranscribe(),
-                  onTapCancel: () => _stopRecordingAndTranscribe(),
-                  child: Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: _isRecording ? Colors.redAccent : AppTheme.primaryDark,
-                      boxShadow: [
-                        BoxShadow(
-                          color: (_isRecording ? Colors.redAccent : AppTheme.primaryDark).withOpacity(0.4),
-                          blurRadius: 18,
-                          spreadRadius: 4,
-                        ),
-                      ],
-                    ),
-                    child: Icon(
-                      _isRecording ? Icons.mic : Icons.mic_none,
-                      color: Colors.white,
-                      size: 60,
+                // Pulsing Mic Orb
+                Center(
+                  child: VoiceOrb(
+                    isListening: _isRecording,
+                    onTap: _toggleRecording,
+                    size: 110,
+                    label: _isRecording ? 'Listening... Tap to stop' : 'Tap to speak',
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+                Center(
+                  child: Text(
+                    _isRecording
+                        ? 'Listening... Tap again when finished'
+                        : _isTranscribing
+                            ? 'Transcribing your voice...'
+                            : 'Tap microphone to speak',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: _isRecording ? GhajiniTheme.emergencyRed : GhajiniTheme.darkBrown,
                     ),
                   ),
                 ),
-              ),
 
-              const SizedBox(height: 12),
-              Center(
-                child: Text(
-                  _isRecording
-                      ? 'Listening... Release to ask'
-                      : _isTranscribing
-                          ? 'Transcribing your voice...'
-                          : 'Hold button to speak',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: _isRecording ? Colors.redAccent : Colors.black87,
-                  ),
-                ),
-              ),
+                const SizedBox(height: 24),
 
-              const SizedBox(height: 24),
-
-              // Needs Confirmation Prompt ("Did you ask: ...?")
-              if (_needsConfirmation && _transcribedText != null && _transcribedText!.isNotEmpty)
-                Card(
-                  color: const Color(0xFFFFF8E1),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                    side: const BorderSide(color: AppTheme.accentAmber, width: 2.5),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
+                // Confirmation card for low confidence transcription
+                if (_needsConfirmation && _transcribedText != null && _transcribedText!.isNotEmpty)
+                  SectionCard(
+                    borderColor: GhajiniTheme.amberAccent,
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         const Row(
                           children: [
-                            Icon(Icons.hearing, color: AppTheme.accentAmber, size: 32),
+                            Icon(Icons.hearing, color: GhajiniTheme.amberAccent, size: 32),
                             SizedBox(width: 10),
                             Expanded(
                               child: Text(
-                                'Just to make sure I heard you right:',
-                                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                'Did I hear you correctly?',
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: GhajiniTheme.darkBrown,
+                                ),
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 12),
-                        Text(
-                          'Did you ask: "$_transcribedText"?',
-                          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFFBEB),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '"$_transcribedText"',
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w600,
+                              color: GhajiniTheme.darkBrown,
+                            ),
+                          ),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 18),
                         Row(
                           children: [
                             Expanded(
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppTheme.gentleGreen,
-                                  minimumSize: const Size(0, 64),
-                                ),
+                              child: BigButton(
+                                text: 'Yes, ask this',
+                                icon: Icons.check,
+                                backgroundColor: GhajiniTheme.successGreen,
+                                textColor: Colors.white,
                                 onPressed: () => _askQuestion(_transcribedText!),
-                                child: const Text('Yes, ask this', style: TextStyle(fontSize: 20)),
                               ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: OutlinedButton(
-                                style: OutlinedButton.styleFrom(
-                                  minimumSize: const Size(0, 64),
-                                  side: const BorderSide(color: Colors.black54, width: 2),
-                                ),
+                              child: BigButton(
+                                text: 'No, retry',
+                                icon: Icons.close,
+                                backgroundColor: Colors.white,
+                                textColor: GhajiniTheme.darkBrown,
+                                borderColor: GhajiniTheme.borderLight,
                                 onPressed: () {
                                   setState(() {
                                     _needsConfirmation = false;
@@ -331,7 +399,6 @@ class _AskScreenState extends ConsumerState<AskScreen> {
                                     _questionController.clear();
                                   });
                                 },
-                                child: const Text('No, try again', style: TextStyle(fontSize: 20, color: Colors.black87)),
                               ),
                             ),
                           ],
@@ -339,106 +406,112 @@ class _AskScreenState extends ConsumerState<AskScreen> {
                       ],
                     ),
                   ),
-                ),
 
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              // Text Question Field
-              TextField(
-                controller: _questionController,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w500),
-                maxLines: 2,
-                decoration: InputDecoration(
-                  hintText: 'e.g., Where does Priya live?',
-                  suffixIcon: IconButton(
-                    icon: const Icon(Icons.send, color: AppTheme.primaryDark, size: 30),
-                    onPressed: _isLoading ? null : () => _askQuestion(_questionController.text),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 64),
-                  backgroundColor: AppTheme.primaryDark,
-                ),
-                onPressed: _isLoading ? null : () => _askQuestion(_questionController.text),
-                icon: const Icon(Icons.search, size: 28),
-                label: const Text('Ask Ghajini', style: TextStyle(fontSize: 22)),
-              ),
-
-              const SizedBox(height: 24),
-
-              if (_isLoading)
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Column(
-                      children: [
-                        CircularProgressIndicator(strokeWidth: 4),
-                        SizedBox(height: 16),
-                        Text(
-                          'Let me think...',
-                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.primaryDark),
+                // Fallback Text Field
+                SectionCard(
+                  child: Column(
+                    children: [
+                      TextField(
+                        controller: _questionController,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w500,
+                          color: GhajiniTheme.darkBrown,
                         ),
-                      ],
-                    ),
-                  ),
-                ),
-
-              // Friendly Error Card with Call Family Option
-              if (_errorMessage != null)
-                Card(
-                  color: const Color(0xFFFFEBEE),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    side: const BorderSide(color: Colors.redAccent, width: 2),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          _errorMessage!,
-                          style: const TextStyle(fontSize: 22, color: Colors.black87),
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.distressRed,
-                            minimumSize: const Size(double.infinity, 60),
+                        maxLines: 2,
+                        decoration: InputDecoration(
+                          hintText: 'e.g., Where does Priya live?',
+                          hintStyle: const TextStyle(color: Colors.black38),
+                          suffixIcon: IconButton(
+                            icon: const Icon(Icons.send_rounded, color: GhajiniTheme.primaryOrange, size: 32),
+                            onPressed: _isLoading ? null : () => _askQuestion(_questionController.text),
                           ),
-                          onPressed: _callFamily,
-                          icon: const Icon(Icons.phone),
-                          label: const Text('Call Family Now', style: TextStyle(fontSize: 20)),
                         ),
-                      ],
-                    ),
+                        onSubmitted: (val) => _askQuestion(val),
+                      ),
+                      const SizedBox(height: 14),
+                      BigButton(
+                        text: 'Ask Ghajini',
+                        icon: Icons.search_rounded,
+                        backgroundColor: GhajiniTheme.primaryOrange,
+                        textColor: Colors.white,
+                        onPressed: _isLoading ? null : () => _askQuestion(_questionController.text),
+                      ),
+                    ],
                   ),
                 ),
 
-              // Answer Display Card with Replay Button
-              if (_response != null && !_isLoading) _buildAnswerCard(context, _response!, tts, currentLang),
-            ],
+                const SizedBox(height: 24),
+
+                // Loading
+                if (_isLoading)
+                  SectionCard(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Column(
+                        children: [
+                          const CircularProgressIndicator(
+                            strokeWidth: 4,
+                            valueColor: AlwaysStoppedAnimation<Color>(GhajiniTheme.primaryOrange),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Remembering...',
+                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                              color: GhajiniTheme.primaryOrange,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                // Friendly Error
+                if (_errorMessage != null && !_isLoading) ...[
+                  FriendlyError(
+                    message: _errorMessage!,
+                    onRetry: () => _askQuestion(_questionController.text),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+
+                // Answer Display
+                if (_response != null && !_isLoading)
+                  _buildAnswerCard(context, _response!, tts, currentLang),
+
+                const SizedBox(height: 32),
+              ],
+            ),
           ),
         ),
       ),
+      bottomNavigationBar: isWide
+          ? null
+          : Container(
+              padding: const EdgeInsets.all(16),
+              color: GhajiniTheme.softCream,
+              child: FullWidthSosButton(
+                onPressed: () => ref.read(apiServiceProvider).triggerSOSHelp(
+                  note: 'SOS triggered from Ask Memory screen',
+                ),
+              ),
+            ),
     );
   }
 
   Widget _buildAnswerCard(BuildContext context, AskResponseModel res, dynamic tts, String lang) {
     final isGrounded = res.grounded;
-    final cardColor = isGrounded ? const Color(0xFFE8F5E9) : const Color(0xFFFFF3E0);
-    final borderColor = isGrounded ? AppTheme.gentleGreen : AppTheme.accentAmber;
+    final cardBg = isGrounded ? GhajiniTheme.successBg : const Color(0xFFFFFBEB);
+    final borderCol = isGrounded ? GhajiniTheme.successGreen : GhajiniTheme.amberAccent;
 
     return Card(
-      color: cardColor,
+      color: cardBg,
+      elevation: 3,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-        side: BorderSide(color: borderColor, width: 3),
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: borderCol, width: 2.5),
       ),
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -447,57 +520,83 @@ class _AskScreenState extends ConsumerState<AskScreen> {
           children: [
             Row(
               children: [
-                Icon(
-                  isGrounded ? Icons.lightbulb_outline : Icons.help_outline,
-                  color: borderColor,
-                  size: 36,
+                StatusChip(
+                  label: isGrounded ? 'Grounded Memory' : 'Helpful Guidance',
+                  type: isGrounded ? StatusType.success : StatusType.warning,
+                  fontSize: 18,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    isGrounded ? 'Memory Answer' : 'Not Certain',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: borderColor,
-                    ),
-                  ),
+                const Spacer(),
+                IconButton(
+                  tooltip: 'Replay audio',
+                  icon: const Icon(Icons.volume_up, size: 32, color: GhajiniTheme.darkBrown),
+                  onPressed: () => tts.speak(res.answer, lang: lang),
                 ),
               ],
             ),
             const SizedBox(height: 16),
+
+            // Answer text
             Text(
               res.answer,
               style: const TextStyle(
+                fontFamily: 'serif',
                 fontSize: 24,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
+                fontWeight: FontWeight.bold,
+                color: GhajiniTheme.darkBrown,
                 height: 1.4,
               ),
             ),
+
+            if (res.sources.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              const Text(
+                'Remembered from:',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: GhajiniTheme.mutedBrown,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ...res.sources.map(
+                (src) => Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.check_circle_outline, size: 20, color: GhajiniTheme.successGreen),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          src,
+                          style: const TextStyle(fontSize: 18, color: GhajiniTheme.darkBrown),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+
             const SizedBox(height: 24),
 
-            // Replay Button
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryDark,
-                minimumSize: const Size(double.infinity, 64),
-              ),
+            // Action: Replay Button
+            BigButton(
+              text: 'Replay Answer',
+              icon: Icons.replay_rounded,
+              backgroundColor: GhajiniTheme.primaryOrange,
+              textColor: Colors.white,
               onPressed: () => tts.speak(res.answer, lang: lang),
-              icon: const Icon(Icons.replay, size: 28),
-              label: const Text('Replay Speech', style: TextStyle(fontSize: 22)),
             ),
 
             if (!isGrounded) ...[
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.distressRed,
-                  minimumSize: const Size(double.infinity, 64),
-                ),
+              const SizedBox(height: 14),
+              BigButton(
+                text: 'Call Family For Help',
+                icon: Icons.phone_rounded,
+                backgroundColor: GhajiniTheme.emergencyRed,
+                textColor: Colors.white,
                 onPressed: _callFamily,
-                icon: const Icon(Icons.phone),
-                label: const Text('Call Family', style: TextStyle(fontSize: 22)),
               ),
             ],
           ],

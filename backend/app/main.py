@@ -70,10 +70,10 @@ async def lifespan(app: FastAPI):
     voice_transcriber.load()
     start_scheduler()
 
-    # Pre-warm Ollama if not running in pytest
-    if not os.environ.get("PYTEST_CURRENT_TEST"):
+    # Pre-warm Ollama if not running in pytest or test mode
+    if not os.environ.get("PYTEST_CURRENT_TEST") and not os.environ.get("TESTING"):
         try:
-            await asyncio.wait_for(ollama_client._call_ollama("hello"), timeout=2.5)
+            await asyncio.wait_for(ollama_client.generate_answer("hello", ["hello"]), timeout=0.5)
             logger.info("Ollama LLM warm-up completed successfully.")
         except Exception as e:
             logger.info(f"Ollama warm-up note: {e}")

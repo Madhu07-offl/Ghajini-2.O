@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:ghajini_app/core/api_client.dart';
 import 'package:ghajini_app/models/alert_model.dart';
 import 'package:ghajini_app/models/dashboard_summary.dart';
@@ -22,7 +23,16 @@ class ApiService {
     }
   }
 
-  /// Transcribe voice audio (16kHz mono wav/m4a, max 15s)
+  /// Transcribe voice audio bytes (web & mobile compatible)
+  Future<Map<String, dynamic>> transcribeVoiceBytes(List<int> bytes, {String filename = 'voice_input.wav'}) async {
+    final formData = FormData.fromMap({
+      'file': MultipartFile.fromBytes(bytes, filename: filename),
+    });
+    final res = await _dio.post('/voice/transcribe', data: formData);
+    return res.data as Map<String, dynamic>;
+  }
+
+  /// Transcribe voice audio file path (delegates to fromFile on native, or fromBytes on web)
   Future<Map<String, dynamic>> transcribeVoice(String filePath) async {
     final formData = FormData.fromMap({
       'file': await MultipartFile.fromFile(filePath, filename: 'voice_input.wav'),
@@ -59,6 +69,19 @@ class ApiService {
     return Person.fromJson(res.data as Map<String, dynamic>);
   }
 
+  /// Upload face photo bytes for person (Web and mobile compatible)
+  Future<Map<String, dynamic>> uploadPersonFaceBytes({
+    required int personId,
+    required List<int> bytes,
+    String filename = 'face.jpg',
+  }) async {
+    final formData = FormData.fromMap({
+      'image': MultipartFile.fromBytes(bytes, filename: filename),
+    });
+    final res = await _dio.post('/people/$personId/faces', data: formData);
+    return res.data as Map<String, dynamic>;
+  }
+
   /// Upload face photo for person
   Future<Map<String, dynamic>> uploadPersonFace({
     required int personId,
@@ -75,6 +98,15 @@ class ApiService {
   Future<bool> deletePerson(int personId) async {
     final res = await _dio.delete('/people/$personId');
     return res.statusCode == 200;
+  }
+
+  /// Recognize face from bytes (Web and mobile compatible)
+  Future<RecognitionResult> recognizeFaceBytes(List<int> bytes, {String filename = 'recognition.jpg'}) async {
+    final formData = FormData.fromMap({
+      'image': MultipartFile.fromBytes(bytes, filename: filename),
+    });
+    final res = await _dio.post('/recognize', data: formData);
+    return RecognitionResult.fromJson(res.data as Map<String, dynamic>);
   }
 
   /// Recognize face from photo

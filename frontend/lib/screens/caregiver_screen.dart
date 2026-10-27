@@ -1,30 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ghajini_app/core/responsive.dart';
 import 'package:ghajini_app/core/theme.dart';
+import 'package:ghajini_app/models/dashboard_summary.dart';
+import 'package:ghajini_app/models/person.dart';
 import 'package:ghajini_app/models/reminder.dart';
 import 'package:ghajini_app/providers/app_providers.dart';
+import 'package:ghajini_app/widgets/big_button.dart';
+import 'package:ghajini_app/widgets/person_card.dart';
+import 'package:ghajini_app/widgets/reminder_card.dart';
+import 'package:ghajini_app/widgets/section_card.dart';
+import 'package:ghajini_app/widgets/status_chip.dart';
 
+/// Caregiver Portal with Responsive Navigation:
+/// - Compact (<600 px): BottomNavigationBar (People, Reminders, Dashboard, Alerts, Settings)
+/// - Medium (600-1024 px): NavigationRail on the left
+/// - Expanded (>1024 px): Permanent Side Drawer + 2-column Dashboard & max-width 1100 px content
 class CaregiverScreen extends ConsumerStatefulWidget {
-  const CaregiverScreen({super.key});
+  final int initialTab;
+  const CaregiverScreen({super.key, this.initialTab = 0});
 
   @override
   ConsumerState<CaregiverScreen> createState() => _CaregiverScreenState();
 }
 
-class _CaregiverScreenState extends ConsumerState<CaregiverScreen> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _CaregiverScreenState extends ConsumerState<CaregiverScreen> {
+  late int _currentIndex;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
+    _currentIndex = widget.initialTab;
   }
 
   void _showAddEditReminderDialog([Reminder? existing]) {
@@ -38,9 +45,16 @@ class _CaregiverScreenState extends ConsumerState<CaregiverScreen> with SingleTi
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: GhajiniTheme.softCream,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Text(
             existing == null ? 'Create Reminder' : 'Edit Reminder',
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              fontFamily: 'serif',
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: GhajiniTheme.darkBrown,
+            ),
           ),
           content: SingleChildScrollView(
             child: Column(
@@ -48,25 +62,34 @@ class _CaregiverScreenState extends ConsumerState<CaregiverScreen> with SingleTi
               children: [
                 TextField(
                   controller: titleController,
-                  style: const TextStyle(fontSize: 20),
-                  decoration: const InputDecoration(labelText: 'Title *', hintText: 'e.g., Blood Pressure Pill'),
+                  style: const TextStyle(fontSize: 20, color: GhajiniTheme.darkBrown),
+                  decoration: const InputDecoration(
+                    labelText: 'Title *',
+                    hintText: 'e.g., Blood Pressure Pill',
+                  ),
                 ),
                 const SizedBox(height: 14),
                 TextField(
                   controller: messageController,
-                  style: const TextStyle(fontSize: 18),
-                  decoration: const InputDecoration(labelText: 'Instructions', hintText: 'e.g., Take with full glass of water'),
+                  style: const TextStyle(fontSize: 18, color: GhajiniTheme.darkBrown),
+                  decoration: const InputDecoration(
+                    labelText: 'Instructions',
+                    hintText: 'e.g., Take with a full glass of water',
+                  ),
                 ),
                 const SizedBox(height: 14),
                 TextField(
                   controller: timeController,
-                  style: const TextStyle(fontSize: 20),
-                  decoration: const InputDecoration(labelText: 'Time (HH:MM) *', hintText: '09:00'),
+                  style: const TextStyle(fontSize: 20, color: GhajiniTheme.darkBrown),
+                  decoration: const InputDecoration(
+                    labelText: 'Time (HH:MM 24h) *',
+                    hintText: '09:00',
+                  ),
                 ),
                 const SizedBox(height: 14),
                 DropdownButtonFormField<String>(
                   value: repeatOption,
-                  decoration: const InputDecoration(labelText: 'Repeat'),
+                  decoration: const InputDecoration(labelText: 'Repeat Schedule'),
                   items: const [
                     DropdownMenuItem(value: 'daily', child: Text('Daily (Every Day)', style: TextStyle(fontSize: 18))),
                     DropdownMenuItem(value: 'weekly', child: Text('Weekly', style: TextStyle(fontSize: 18))),
@@ -78,8 +101,12 @@ class _CaregiverScreenState extends ConsumerState<CaregiverScreen> with SingleTi
                 const SizedBox(height: 14),
                 CheckboxListTile(
                   value: isCritical,
-                  title: const Text('Critical Medication', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  subtitle: const Text('Fires even during quiet hours (10PM-6AM)'),
+                  activeColor: GhajiniTheme.primaryOrange,
+                  title: const Text(
+                    'Critical Medication',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: GhajiniTheme.darkBrown),
+                  ),
+                  subtitle: const Text('Fires alert even during quiet hours (10 PM - 6 AM)'),
                   onChanged: (val) => setDialogState(() => isCritical = val ?? false),
                 ),
               ],
@@ -88,10 +115,13 @@ class _CaregiverScreenState extends ConsumerState<CaregiverScreen> with SingleTi
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancel', style: TextStyle(fontSize: 18)),
+              child: const Text('Cancel', style: TextStyle(fontSize: 18, color: GhajiniTheme.mutedBrown)),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryDark),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: GhajiniTheme.primaryOrange,
+                foregroundColor: Colors.white,
+              ),
               onPressed: () async {
                 final api = ref.read(apiServiceProvider);
                 final rrule = repeatOption == 'weekly' ? 'FREQ=WEEKLY' : 'FREQ=DAILY';
@@ -120,7 +150,7 @@ class _CaregiverScreenState extends ConsumerState<CaregiverScreen> with SingleTi
                 ref.invalidate(upcomingRemindersProvider);
                 if (mounted) Navigator.of(ctx).pop();
               },
-              child: const Text('Save', style: TextStyle(fontSize: 18)),
+              child: const Text('Save Reminder', style: TextStyle(fontSize: 18)),
             ),
           ],
         ),
@@ -130,139 +160,905 @@ class _CaregiverScreenState extends ConsumerState<CaregiverScreen> with SingleTi
 
   @override
   Widget build(BuildContext context) {
-    final remindersAsync = ref.watch(upcomingRemindersProvider);
-    final alertsAsync = ref.watch(recentAlertsProvider);
+    final screenType = Responsive.getScreenType(context);
 
     return Scaffold(
+      backgroundColor: GhajiniTheme.softCream,
       appBar: AppBar(
-        title: const Text('Caregiver Portal'),
-        backgroundColor: AppTheme.primaryDark,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.analytics_outlined, size: 28),
-            tooltip: 'Adherence Analytics',
-            onPressed: () => context.push('/dashboard'),
+        title: Text(
+          _getTitleForTab(_currentIndex),
+          style: const TextStyle(
+            fontFamily: 'serif',
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
           ),
-          IconButton(
-            icon: const Icon(Icons.privacy_tip_outlined, size: 28),
-            tooltip: 'Privacy & Data',
-            onPressed: () => context.push('/privacy'),
-          ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          labelStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          tabs: const [
-            Tab(text: 'Reminders'),
-            Tab(text: 'Alerts'),
-          ],
         ),
+        backgroundColor: GhajiniTheme.primaryOrange,
+        foregroundColor: Colors.white,
+        elevation: 2,
         actions: [
           IconButton(
-            icon: const Icon(Icons.person_add, size: 28),
-            tooltip: 'Add Contact',
-            onPressed: () => context.push('/add-person'),
+            tooltip: 'Switch to Patient Mode',
+            icon: const Icon(Icons.person_pin, size: 28),
+            onPressed: () => context.go('/'),
           ),
         ],
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          // Tab 1: Reminders Management
-          remindersAsync.when(
-            data: (reminders) => Scaffold(
-              floatingActionButton: FloatingActionButton.extended(
-                backgroundColor: AppTheme.primaryDark,
-                onPressed: () => _showAddEditReminderDialog(),
-                icon: const Icon(Icons.add, color: Colors.white),
-                label: const Text('New Reminder', style: TextStyle(color: Colors.white, fontSize: 18)),
-              ),
-              body: reminders.isEmpty
-                  ? const Center(
-                      child: Text('No reminders configured yet.', style: TextStyle(fontSize: 20, color: Colors.black54)),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: reminders.length,
-                      itemBuilder: (ctx, i) {
-                        final rem = reminders[i];
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          child: ListTile(
-                            leading: Icon(
-                              rem.isCritical ? Icons.emergency : Icons.alarm,
-                              color: rem.isCritical ? Colors.red : AppTheme.primaryDark,
-                              size: 34,
-                            ),
-                            title: Text(rem.title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                            subtitle: Text(
-                              'Time: ${rem.scheduledTime} | Repeat: ${rem.frequency}${rem.isCritical ? " | Critical" : ""}',
-                              style: const TextStyle(fontSize: 16),
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.edit, color: Colors.blue),
-                                  onPressed: () => _showAddEditReminderDialog(rem),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete, color: Colors.red),
-                                  onPressed: () async {
-                                    await ref.read(apiServiceProvider).deleteReminder(rem.id);
-                                    ref.invalidate(upcomingRemindersProvider);
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-            ),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Error loading reminders: $e')),
-          ),
+      body: SafeArea(
+        child: _buildLayout(context, screenType),
+      ),
+      bottomNavigationBar: screenType == ScreenType.compact
+          ? NavigationBar(
+              selectedIndex: _currentIndex,
+              backgroundColor: Colors.white,
+              indicatorColor: GhajiniTheme.borderLight,
+              onDestinationSelected: (index) => setState(() => _currentIndex = index),
+              destinations: const [
+                NavigationDestination(
+                  icon: Icon(Icons.people_outline),
+                  selectedIcon: Icon(Icons.people, color: GhajiniTheme.primaryOrange),
+                  label: 'People',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.alarm_outlined),
+                  selectedIcon: Icon(Icons.alarm, color: GhajiniTheme.primaryOrange),
+                  label: 'Reminders',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.insights_outlined),
+                  selectedIcon: Icon(Icons.insights, color: GhajiniTheme.primaryOrange),
+                  label: 'Dashboard',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.notifications_outlined),
+                  selectedIcon: Icon(Icons.notifications_active, color: GhajiniTheme.emergencyRed),
+                  label: 'Alerts',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.settings_outlined),
+                  selectedIcon: Icon(Icons.settings, color: GhajiniTheme.primaryOrange),
+                  label: 'Settings',
+                ),
+              ],
+            )
+          : null,
+    );
+  }
 
-          // Tab 2: Recent Alerts View
-          alertsAsync.when(
-            data: (alerts) => alerts.isEmpty
-                ? const Center(
-                    child: Text('No alerts triggered yet.', style: TextStyle(fontSize: 20, color: Colors.black54)),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: alerts.length,
-                    itemBuilder: (ctx, i) {
-                      final alert = alerts[i];
-                      final isEmergency = alert.alertType.contains('emergency') || alert.alertType.contains('sos');
-                      return Card(
-                        color: isEmergency ? const Color(0xFFFFEBEE) : const Color(0xFFFFF8E1),
-                        margin: const EdgeInsets.only(bottom: 12),
-                        child: ListTile(
-                          leading: Icon(
-                            isEmergency ? Icons.warning_amber_rounded : Icons.notification_important,
-                            color: isEmergency ? Colors.red : Colors.orange,
-                            size: 36,
-                          ),
-                          title: Text(alert.alertType.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                          subtitle: Text(alert.message, style: const TextStyle(fontSize: 18, color: Colors.black87)),
-                          trailing: Text(
-                            alert.status,
-                            style: TextStyle(fontWeight: FontWeight.bold, color: isEmergency ? Colors.red : Colors.orange),
-                          ),
+  String _getTitleForTab(int index) {
+    switch (index) {
+      case 0:
+        return 'Caregiver: Family & Friends';
+      case 1:
+        return 'Caregiver: Reminders';
+      case 2:
+        return 'Caregiver: Activity Dashboard';
+      case 3:
+        return 'Caregiver: Distress Alerts';
+      case 4:
+      default:
+        return 'Caregiver: Privacy & Settings';
+    }
+  }
+
+  Widget _buildLayout(BuildContext context, ScreenType screenType) {
+    if (screenType == ScreenType.compact) {
+      return SingleChildScrollView(
+        padding: Responsive.screenPadding(context),
+        child: ResponsiveCaregiverContainer(
+          child: _buildCurrentTabContent(context, screenType),
+        ),
+      );
+    }
+
+    if (screenType == ScreenType.medium) {
+      return Row(
+        children: [
+          NavigationRail(
+            selectedIndex: _currentIndex,
+            onDestinationSelected: (index) => setState(() => _currentIndex = index),
+            backgroundColor: Colors.white,
+            selectedIconTheme: const IconThemeData(color: GhajiniTheme.primaryOrange, size: 28),
+            unselectedIconTheme: const IconThemeData(color: GhajiniTheme.mutedBrown, size: 24),
+            selectedLabelTextStyle: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: GhajiniTheme.primaryOrange,
+            ),
+            unselectedLabelTextStyle: const TextStyle(color: GhajiniTheme.mutedBrown),
+            labelType: NavigationRailLabelType.all,
+            destinations: const [
+              NavigationRailDestination(icon: Icon(Icons.people_outline), label: Text('People')),
+              NavigationRailDestination(icon: Icon(Icons.alarm_outlined), label: Text('Reminders')),
+              NavigationRailDestination(icon: Icon(Icons.insights_outlined), label: Text('Dashboard')),
+              NavigationRailDestination(icon: Icon(Icons.notifications_outlined), label: Text('Alerts')),
+              NavigationRailDestination(icon: Icon(Icons.settings_outlined), label: Text('Settings')),
+            ],
+          ),
+          const VerticalDivider(thickness: 1, width: 1, color: GhajiniTheme.borderLight),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: Responsive.screenPadding(context),
+              child: ResponsiveCaregiverContainer(
+                child: _buildCurrentTabContent(context, screenType),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Expanded Layout (>1024 px) with permanent side drawer
+    return Row(
+      children: [
+        SizedBox(
+          width: 250,
+          child: Container(
+            color: Colors.white,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  color: GhajiniTheme.softCream,
+                  child: const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Ghajini 2.0',
+                        style: TextStyle(
+                          fontFamily: 'serif',
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: GhajiniTheme.darkBrown,
                         ),
-                      );
-                    },
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Caregiver Control Suite',
+                        style: TextStyle(fontSize: 16, color: GhajiniTheme.primaryOrange, fontWeight: FontWeight.w600),
+                      ),
+                    ],
                   ),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Error loading alerts: $e')),
+                ),
+                const Divider(height: 1, thickness: 1, color: GhajiniTheme.borderLight),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    children: [
+                      _buildDrawerItem(0, Icons.people, 'Family & Contacts'),
+                      _buildDrawerItem(1, Icons.alarm, 'Daily Reminders'),
+                      _buildDrawerItem(2, Icons.insights, 'Dashboard & Metrics'),
+                      _buildDrawerItem(3, Icons.notifications_active, 'Safety Alerts'),
+                      _buildDrawerItem(4, Icons.privacy_tip, 'Privacy & Settings'),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: BigButton(
+                    text: 'Patient Mode',
+                    icon: Icons.person_pin,
+                    backgroundColor: GhajiniTheme.softCream,
+                    textColor: GhajiniTheme.darkBrown,
+                    borderColor: GhajiniTheme.borderLight,
+                    onPressed: () => context.go('/'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const VerticalDivider(thickness: 1, width: 1, color: GhajiniTheme.borderLight),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+            child: ResponsiveCaregiverContainer(
+              child: _buildCurrentTabContent(context, screenType),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDrawerItem(int index, IconData icon, String label) {
+    final isSelected = _currentIndex == index;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: isSelected ? GhajiniTheme.softCream : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        border: isSelected ? Border.all(color: GhajiniTheme.borderLight) : null,
+      ),
+      child: ListTile(
+        leading: Icon(icon, color: isSelected ? GhajiniTheme.primaryOrange : GhajiniTheme.mutedBrown),
+        title: Text(
+          label,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            color: isSelected ? GhajiniTheme.primaryOrange : GhajiniTheme.darkBrown,
+          ),
+        ),
+        onTap: () => setState(() => _currentIndex = index),
+      ),
+    );
+  }
+
+  Widget _buildCurrentTabContent(BuildContext context, ScreenType screenType) {
+    switch (_currentIndex) {
+      case 0:
+        return _buildPeopleTab(context);
+      case 1:
+        return _buildRemindersTab(context);
+      case 2:
+        return _buildDashboardTab(context, screenType);
+      case 3:
+        return _buildAlertsTab(context);
+      case 4:
+      default:
+        return _buildSettingsTab(context);
+    }
+  }
+
+  // 1. People Tab
+  Widget _buildPeopleTab(BuildContext context) {
+    final peopleAsync = ref.watch(peopleListProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Recognized People',
+              style: TextStyle(fontFamily: 'serif', fontSize: 26, fontWeight: FontWeight.bold),
+            ),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: GhajiniTheme.primaryOrange,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              ),
+              onPressed: () => context.push('/add-person'),
+              icon: const Icon(Icons.person_add),
+              label: const Text('Add Person', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 18),
+        peopleAsync.when(
+          data: (people) {
+            if (people.isEmpty) {
+              return SectionCard(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.people_alt_outlined, size: 54, color: GhajiniTheme.mutedBrown),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'No family or friends added yet.',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: GhajiniTheme.darkBrown),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Add contacts and photo references so Ghajini can recognize and introduce them to the patient.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 17, color: GhajiniTheme.mutedBrown),
+                      ),
+                      const SizedBox(height: 16),
+                      BigButton(
+                        text: 'Add First Person',
+                        icon: Icons.person_add,
+                        backgroundColor: GhajiniTheme.primaryOrange,
+                        textColor: Colors.white,
+                        onPressed: () => context.push('/add-person'),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+            return ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: people.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (ctx, i) {
+                final person = people[i];
+                return PersonCard(
+                  name: person.name,
+                  relationship: person.relationship,
+                  notes: person.notes,
+                  onDelete: () => _handleDeletePerson(person),
+                );
+              },
+            );
+          },
+          loading: () => const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator())),
+          error: (err, _) => SectionCard(child: Text('Error loading contacts: $err', style: const TextStyle(fontSize: 18))),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _handleDeletePerson(Person person) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: GhajiniTheme.softCream,
+        title: Text('Delete ${person.name}?', style: const TextStyle(fontFamily: 'serif', fontWeight: FontWeight.bold)),
+        content: Text('This will delete ${person.name}\'s profile and face vectors completely from recognition memory.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: GhajiniTheme.emergencyRed),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
     );
+
+    if (confirmed == true) {
+      await ref.read(apiServiceProvider).deletePerson(person.id);
+      ref.invalidate(peopleListProvider);
+    }
+  }
+
+  // 2. Reminders Tab
+  Widget _buildRemindersTab(BuildContext context) {
+    final remindersAsync = ref.watch(upcomingRemindersProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Scheduled Reminders',
+              style: TextStyle(fontFamily: 'serif', fontSize: 26, fontWeight: FontWeight.bold),
+            ),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: GhajiniTheme.primaryOrange,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              ),
+              onPressed: () => _showAddEditReminderDialog(),
+              icon: const Icon(Icons.add_alarm),
+              label: const Text('New Reminder', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 18),
+        remindersAsync.when(
+          data: (reminders) {
+            if (reminders.isEmpty) {
+              return SectionCard(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.alarm_on, size: 54, color: GhajiniTheme.mutedBrown),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'No upcoming reminders scheduled.',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Schedule medication, meals, or daily activities for automated reminders.',
+                        style: TextStyle(fontSize: 17, color: GhajiniTheme.mutedBrown),
+                      ),
+                      const SizedBox(height: 16),
+                      BigButton(
+                        text: 'Create First Reminder',
+                        icon: Icons.add_alarm,
+                        backgroundColor: GhajiniTheme.primaryOrange,
+                        textColor: Colors.white,
+                        onPressed: () => _showAddEditReminderDialog(),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+            return ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: reminders.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (ctx, i) {
+                final r = reminders[i];
+                return ReminderCard(
+                  title: r.title,
+                  scheduledTime: r.scheduledTime,
+                  message: r.message,
+                  isCritical: r.isCritical,
+                  frequency: r.frequency,
+                  onEdit: () => _showAddEditReminderDialog(r),
+                  onDelete: () async {
+                    await ref.read(apiServiceProvider).deleteReminder(r.id);
+                    ref.invalidate(upcomingRemindersProvider);
+                  },
+                );
+              },
+            );
+          },
+          loading: () => const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator())),
+          error: (err, _) => SectionCard(child: Text('Error loading reminders: $err', style: const TextStyle(fontSize: 18))),
+        ),
+      ],
+    );
+  }
+
+  // 3. Dashboard Tab (2-column on wide screens)
+  Widget _buildDashboardTab(BuildContext context, ScreenType screenType) {
+    final summaryAsync = ref.watch(dashboardSummaryProvider);
+    final dailyAsync = ref.watch(dailySummaryProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Daily Activity Summary Card
+        dailyAsync.when(
+          data: (daily) => _buildDailySummaryCard(daily),
+          loading: () => const SectionCard(child: Center(child: CircularProgressIndicator())),
+          error: (_, __) => _buildDailySummaryCard(
+            DailySummary(
+              summary: 'Today Mother took her scheduled morning care, met family, and had no distress events.',
+              source: 'template',
+              details: {},
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 20),
+
+        // Summary Metrics & Bar Chart
+        summaryAsync.when(
+          data: (summary) {
+            if (screenType == ScreenType.expanded) {
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 1,
+                    child: Column(
+                      children: [
+                        _buildAdherenceCard(summary),
+                        const SizedBox(height: 20),
+                        _buildRecognitionsCard(summary),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 20),
+                  Expanded(
+                    flex: 1,
+                    child: Column(
+                      children: [
+                        _buildWeeklyBarChart(summary.weeklyHistory),
+                        const SizedBox(height: 20),
+                        _buildTopQuestionsCard(summary.topQuestions),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            }
+
+            return Column(
+              children: [
+                _buildAdherenceCard(summary),
+                const SizedBox(height: 20),
+                _buildWeeklyBarChart(summary.weeklyHistory),
+                const SizedBox(height: 20),
+                _buildTopQuestionsCard(summary.topQuestions),
+              ],
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (_, __) => const SectionCard(child: Text('Dashboard data is loading or offline.')),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDailySummaryCard(DailySummary daily) {
+    return SectionCard(
+      borderColor: GhajiniTheme.successGreen,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.wb_sunny_rounded, color: GhajiniTheme.primaryOrange, size: 30),
+              const SizedBox(width: 10),
+              const Text(
+                "Today's Overview",
+                style: TextStyle(fontFamily: 'serif', fontSize: 22, fontWeight: FontWeight.bold, color: GhajiniTheme.darkBrown),
+              ),
+              const Spacer(),
+              StatusChip(label: daily.source.toUpperCase(), type: StatusType.success),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            daily.summary,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600, height: 1.4, color: GhajiniTheme.darkBrown),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAdherenceCard(DashboardSummary summary) {
+    final pctColor = summary.adherencePct >= 80 ? GhajiniTheme.successGreen : GhajiniTheme.amberAccent;
+
+    return SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.medication_rounded, color: GhajiniTheme.primaryOrange, size: 28),
+              SizedBox(width: 8),
+              Text('Medication Adherence', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                '${summary.adherencePct.toStringAsFixed(1)}%',
+                style: TextStyle(fontSize: 44, fontWeight: FontWeight.bold, color: pctColor),
+              ),
+              const SizedBox(width: 10),
+              const Text('(Past 7 Days)', style: TextStyle(fontSize: 18, color: GhajiniTheme.mutedBrown)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: (summary.adherencePct / 100.0).clamp(0.0, 1.0),
+              minHeight: 14,
+              backgroundColor: GhajiniTheme.borderLight.withOpacity(0.4),
+              color: pctColor,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('${summary.doneCount} taken', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: GhajiniTheme.successGreen)),
+              Text('${summary.missedCount} missed', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: GhajiniTheme.emergencyRed)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecognitionsCard(DashboardSummary summary) {
+    return SectionCard(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          Column(
+            children: [
+              const Text('Recognitions Today', style: TextStyle(fontSize: 16, color: GhajiniTheme.mutedBrown)),
+              const SizedBox(height: 6),
+              Text('${summary.recognitionsToday}', style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: GhajiniTheme.primaryOrange)),
+            ],
+          ),
+          Column(
+            children: [
+              const Text('Active Alerts', style: TextStyle(fontSize: 16, color: GhajiniTheme.mutedBrown)),
+              const SizedBox(height: 6),
+              Text('${summary.alertsCount}', style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: GhajiniTheme.emergencyRed)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWeeklyBarChart(List<WeeklyDayHistory> history) {
+    final maxTotal = history.fold<int>(1, (max, item) {
+      final t = item.done + item.missed;
+      return t > max ? t : max;
+    });
+
+    return SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Weekly Medication Pattern', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              _buildLegend(GhajiniTheme.successGreen, 'Taken'),
+              const SizedBox(width: 14),
+              _buildLegend(GhajiniTheme.emergencyRed, 'Missed'),
+            ],
+          ),
+          const SizedBox(height: 18),
+          SizedBox(
+            height: 130,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: history.map((day) {
+                final double doneH = ((day.done / maxTotal) * 85).clamp(6.0, 85.0);
+                final double missedH = ((day.missed / maxTotal) * 85).clamp(0.0, 85.0);
+
+                return Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Container(
+                          width: 16,
+                          height: day.done > 0 ? doneH : 6,
+                          decoration: BoxDecoration(
+                            color: day.done > 0 ? GhajiniTheme.successGreen : Colors.grey.shade300,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                        if (day.missed > 0) ...[
+                          const SizedBox(width: 3),
+                          Container(
+                            width: 16,
+                            height: missedH,
+                            decoration: BoxDecoration(
+                              color: GhajiniTheme.emergencyRed,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(day.day, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  ],
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLegend(Color color, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(width: 14, height: 14, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(3))),
+        const SizedBox(width: 6),
+        Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+      ],
+    );
+  }
+
+  Widget _buildTopQuestionsCard(List<TopQuestion> topQuestions) {
+    return SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.help_outline_rounded, color: GhajiniTheme.primaryOrange, size: 26),
+              SizedBox(width: 8),
+              Text('Top Repeated Questions', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (topQuestions.isEmpty)
+            const Text('No repeated patient inquiries recorded today.', style: TextStyle(fontSize: 18, color: GhajiniTheme.mutedBrown))
+          else
+            ...topQuestions.map(
+              (q) => Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(color: GhajiniTheme.softCream, borderRadius: BorderRadius.circular(12)),
+                child: Row(
+                  children: [
+                    Expanded(child: Text(q.question, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600))),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(color: GhajiniTheme.primaryOrange, borderRadius: BorderRadius.circular(12)),
+                      child: Text('${q.count}x', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // 4. Alerts Tab
+  Widget _buildAlertsTab(BuildContext context) {
+    final alertsAsync = ref.watch(recentAlertsProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'Caregiver Distress & Escalation Logs',
+          style: TextStyle(fontFamily: 'serif', fontSize: 26, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 16),
+        alertsAsync.when(
+          data: (alerts) {
+            if (alerts.isEmpty) {
+              return SectionCard(
+                borderColor: GhajiniTheme.successGreen,
+                child: const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      Icon(Icons.check_circle_outline, size: 54, color: GhajiniTheme.successGreen),
+                      SizedBox(height: 12),
+                      Text('All Quiet & Safe', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: GhajiniTheme.successGreen)),
+                      SizedBox(height: 8),
+                      Text('No emergency phrases, missed critical doses, or distress alerts logged.', style: TextStyle(fontSize: 18, color: GhajiniTheme.mutedBrown)),
+                    ],
+                  ),
+                ),
+              );
+            }
+            return ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: alerts.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (ctx, i) {
+                final alert = alerts[i];
+                return SectionCard(
+                  borderColor: alert.severity == 'critical' ? GhajiniTheme.emergencyRed : GhajiniTheme.amberAccent,
+                  child: Row(
+                    children: [
+                      StatusChip(
+                        label: alert.severity.toUpperCase(),
+                        type: alert.severity == 'critical' ? StatusType.error : StatusType.warning,
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(alert.message, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: GhajiniTheme.darkBrown)),
+                            const SizedBox(height: 4),
+                            Text('Time: ${alert.createdAt}', style: const TextStyle(fontSize: 16, color: GhajiniTheme.mutedBrown)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+          loading: () => const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator())),
+          error: (err, _) => SectionCard(child: Text('Error loading alerts: $err', style: const TextStyle(fontSize: 18))),
+        ),
+      ],
+    );
+  }
+
+  // 5. Settings / Privacy Tab
+  Widget _buildSettingsTab(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'Privacy & Data Controls',
+          style: TextStyle(fontFamily: 'serif', fontSize: 26, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 16),
+        SectionCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Data Export & Portability', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              const Text(
+                'Download all stored memories, contacts, reminder adherence, and conversation logs in a structured ZIP archive.',
+                style: TextStyle(fontSize: 18, color: GhajiniTheme.mutedBrown),
+              ),
+              const SizedBox(height: 16),
+              BigButton(
+                text: 'Export All Patient Data',
+                icon: Icons.download_rounded,
+                backgroundColor: GhajiniTheme.primaryOrange,
+                textColor: Colors.white,
+                onPressed: () async {
+                  try {
+                    final bytes = await ref.read(apiServiceProvider).exportData();
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Exported ${bytes.length} bytes archive successfully!'),
+                        backgroundColor: GhajiniTheme.successGreen,
+                      ),
+                    );
+                  } catch (e) {
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Could not export data.'), backgroundColor: GhajiniTheme.emergencyRed),
+                    );
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        SectionCard(
+          borderColor: GhajiniTheme.emergencyRed,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Right to be Forgotten', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: GhajiniTheme.emergencyRed)),
+              const SizedBox(height: 8),
+              const Text(
+                'Wipes all face vectors, personal memories, logs, and audio transcripts permanently for this patient.',
+                style: TextStyle(fontSize: 18, color: GhajiniTheme.mutedBrown),
+              ),
+              const SizedBox(height: 16),
+              BigButton(
+                text: 'Wipe Patient Data',
+                icon: Icons.delete_forever,
+                backgroundColor: GhajiniTheme.emergencyRed,
+                textColor: Colors.white,
+                onPressed: () => _handleWipeData(context),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _handleWipeData(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: GhajiniTheme.softCream,
+        title: const Text('Wipe All Patient Data?', style: TextStyle(fontFamily: 'serif', fontWeight: FontWeight.bold)),
+        content: const Text('This will delete all enrolled faces, memories, reminders, and alerts. This action cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: GhajiniTheme.emergencyRed),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Wipe Completely', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await ref.read(apiServiceProvider).wipePatientData();
+      ref.invalidate(peopleListProvider);
+      ref.invalidate(upcomingRemindersProvider);
+      ref.invalidate(dashboardSummaryProvider);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('All patient data wiped.'), backgroundColor: GhajiniTheme.emergencyRed),
+      );
+    }
   }
 }

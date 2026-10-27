@@ -1,5 +1,9 @@
+import os
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+os.environ["HF_HUB_OFFLINE"] = os.environ.get("HF_HUB_OFFLINE", "1")
+os.environ["TRANSFORMERS_OFFLINE"] = os.environ.get("TRANSFORMERS_OFFLINE", "1")
 
 
 class Settings(BaseSettings):
