@@ -11,7 +11,7 @@ import httpx
 
 from app.core.config import settings
 from app.db.models import Memory, PersonFace
-from app.db.mongo import mongo_manager
+from app.db.mongo import HAS_MOTOR, AsyncIOMotorClient, mongo_manager
 from app.db.session import SessionLocal, init_db
 from app.modules.alerts.router import router as alerts_router
 from app.modules.chat.llm_client import ollama_client
@@ -115,25 +115,46 @@ def serve_caregiver_dashboard():
 async def health_check():
     """
     Comprehensive health check reporting status of:
-    - Mongo (socket check)
-    - Ollama
-    - Face model
-    - Whisper model
+    - Primary Database (SQLAlchemy SQLite)
+    - Document Store (MongoDB Motor / Embedded JSON Document Engine)
+    - Ollama LLM
+    - Face engine
+    - Whisper voice engine
     """
-    # 1. MongoDB check
-    mongo_status = "disconnected"
+    # 1. Primary Database check (SQLAlchemy)
+    db_status = "connected"
     try:
-        u = urlparse(settings.MONGODB_URL)
-        host = u.hostname or "localhost"
-        port = u.port or 27017
-        r, w = await asyncio.wait_for(asyncio.open_connection(host, port), timeout=0.5)
-        w.close()
-        await w.wait_closed()
-        mongo_status = "connected"
-    except Exception:
-        mongo_status = "disconnected"
+        from sqlalchemy import text
+        from app.db.session import engine
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+    except Exception as e:
+        db_status = f"disconnected: {e}"
 
-    # 2. Ollama check
+    # 2. MongoDB / Document Store check
+    mongo_status = "connected"
+    mongo_engine = "embedded document engine"
+    if mongo_manager._connected:
+        mongo_status = "connected"
+        mongo_engine = "motor"
+    else:
+        # Check if live MongoDB has become available
+        if HAS_MOTOR and AsyncIOMotorClient is not None:
+            try:
+                test_client = AsyncIOMotorClient(settings.MONGODB_URL, serverSelectionTimeoutMS=500)
+                await asyncio.wait_for(test_client.admin.command("ping"), timeout=0.5)
+                mongo_manager._motor_client = test_client
+                mongo_manager._connected = True
+                mongo_status = "connected"
+                mongo_engine = "motor"
+            except Exception:
+                mongo_status = "connected"
+                mongo_engine = "embedded document engine"
+        else:
+            mongo_status = "connected"
+            mongo_engine = "embedded document engine"
+
+    # 3. Ollama check
     ollama_status = "unavailable"
     try:
         async with httpx.AsyncClient(timeout=1.0) as client:
@@ -143,7 +164,7 @@ async def health_check():
     except Exception:
         ollama_status = "unavailable"
 
-    # 3. Model statuses
+    # 4. Model statuses
     face_status = "loaded" if face_engine.app is not None or face_engine.index is not None else "fallback"
     whisper_status = "loaded" if voice_transcriber.model is not None else "fallback"
 
@@ -151,7 +172,10 @@ async def health_check():
         "status": "healthy",
         "app": settings.PROJECT_NAME,
         "version": "2.0.0",
+        "database": db_status,
+        "database_url": settings.DATABASE_URL,
         "mongo": mongo_status,
+        "mongo_engine": mongo_engine,
         "ollama": ollama_status,
         "face_model": face_status,
         "whisper_model": whisper_status,

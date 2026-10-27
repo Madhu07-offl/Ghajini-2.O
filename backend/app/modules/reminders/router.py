@@ -84,6 +84,7 @@ def create_reminder(
     return reminder
 
 
+@router.get("", response_model=List[ReminderResponse])
 @router.get("/upcoming", response_model=List[ReminderResponse])
 def get_upcoming_reminders(
     patient_id: int = Query(default=1),

@@ -195,18 +195,14 @@ class MongoManager:
 
         if HAS_MOTOR and AsyncIOMotorClient is not None:
             try:
-                u = urlparse(settings.MONGODB_URL)
-                host = u.hostname or "localhost"
-                port = u.port or 27017
-                r, w = await asyncio.wait_for(asyncio.open_connection(host, port), timeout=0.5)
-                w.close()
-                await w.wait_closed()
-                self._motor_client = AsyncIOMotorClient(settings.MONGODB_URL, serverSelectionTimeoutMS=1000)
+                client = AsyncIOMotorClient(settings.MONGODB_URL, serverSelectionTimeoutMS=1500)
+                await asyncio.wait_for(client.admin.command("ping"), timeout=1.5)
+                self._motor_client = client
                 self._connected = True
                 logger.info(f"Connected to MongoDB via Motor at {settings.MONGODB_URL}")
-            except Exception:
+            except Exception as e:
                 self._connected = False
-                logger.info("MongoDB server not reachable; using AsyncDocumentCollection engine.")
+                logger.info(f"MongoDB server not reachable ({e}); using AsyncDocumentCollection engine.")
         else:
             self._connected = False
 
