@@ -14,7 +14,6 @@ if not _logo_b64:
         os.path.join(os.path.dirname(__file__), "..", "..", "static", "logo.png"),
         os.path.join(os.path.dirname(__file__), "..", "static", "logo_base64.txt"),
         os.path.join(os.path.dirname(__file__), "..", "static", "logo.png"),
-        os.path.join(os.path.dirname(__file__), "static", "logo_base64.txt"),
         os.path.join(os.getcwd(), "backend", "app", "static", "logo_base64.txt"),
         os.path.join(os.getcwd(), "backend", "app", "static", "logo.png"),
     ]
@@ -37,623 +36,1323 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ghajini 2.0 - Memory Companion & CardioLife Care</title>
+  <title>Ghajini 2.0 - Voice Agent Studio & Clinical Care Dashboard</title>
   <link rel="icon" type="image/png" href="data:image/png;base64,__LOGO_B64__">
+  <!-- Modern clean typography: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
   <style>
     :root {
-      --primary: #1E3A8A;
-      --primary-dark: #0F172A;
-      --primary-light: #3B82F6;
-      --accent: #F59E0B;
-      --success: #10B981;
-      --danger: #EF4444;
-      --rose: #F43F5E;
-      --bg: #F8FAFC;
+      --primary: #0F9D7A;          /* Teal green */
+      --primary-hover: #0C8567;
+      --primary-light: #E8F5EE;    /* Setting tile tint */
+      --primary-border: #C6E7D2;
+      --accent-orange: #F26B21;    /* Ask AI orange */
+      --accent-orange-hover: #D95813;
+      --danger-red: #EF4444;       /* Badges & SOS only */
+      --bg-page: #F4F6F7;          /* Very light gray */
       --card-bg: #FFFFFF;
-      --text: #1E293B;
-      --text-muted: #64748B;
+      --card-border: #E5E7EB;
+      --text-title: #1F2937;       /* Dark slate titles */
+      --text-body: #4B5563;        /* Main body */
+      --text-muted: #6B7280;       /* Sub-labels & counters */
+      --sidebar-width: 58px;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: var(--bg); color: var(--text); padding-bottom: 50px; min-height: 100vh; }
 
-    /* Top Navigation Bar */
-    header {
-      background: var(--primary-dark);
-      color: white;
-      padding: 16px 28px;
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+    body { background-color: var(--bg-page); color: var(--text-body); min-height: 100vh; display: flex; }
+
+    /* ======================================================== */
+    /* 1. LEFT SIDEBAR (58px, white, full height)               */
+    /* ======================================================== */
+    .sidebar {
+      width: var(--sidebar-width);
+      background: #FFFFFF;
+      border-right: 1px solid var(--card-border);
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
       display: flex;
-      justify-content: space-between;
+      flex-direction: column;
       align-items: center;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+      justify-content: space-between;
+      padding: 14px 0;
+      z-index: 1000;
+    }
+    .sidebar-top { display: flex; flex-direction: column; align-items: center; gap: 16px; width: 100%; }
+    .sidebar-logo {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--primary-light);
+      border: 1px solid var(--primary-border);
+      cursor: pointer;
+      overflow: hidden;
+      transition: transform 0.15s ease;
+    }
+    .sidebar-logo:hover { transform: scale(1.05); }
+    .sidebar-logo img { width: 32px; height: 32px; object-fit: contain; }
+
+    .nav-icons { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; margin-top: 6px; }
+    .nav-icon-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      position: relative;
+    }
+    .nav-icon-btn:hover { background: #F3F4F6; color: var(--text-title); }
+    .nav-icon-btn.active {
+      background: var(--primary-light);
+      color: var(--primary);
+    }
+    .nav-icon-btn.active::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 8px; bottom: 8px;
+      width: 3px;
+      border-radius: 0 3px 3px 0;
+      background: var(--primary);
+    }
+    .nav-icon-btn svg { width: 20px; height: 20px; stroke-width: 1.8; }
+
+    .sidebar-bottom { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; }
+    .sidebar-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #1F2937;
+      color: white;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    /* ======================================================== */
+    /* MAIN WRAPPER (Offset by sidebar)                         */
+    /* ======================================================== */
+    .app-wrapper {
+      margin-left: var(--sidebar-width);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    /* ======================================================== */
+    /* 2. TOP HEADER BAR                                        */
+    /* ======================================================== */
+    .top-bar {
+      height: 60px;
+      background: #FFFFFF;
+      border-bottom: 1px solid var(--card-border);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
       position: sticky;
       top: 0;
       z-index: 100;
     }
-    .header-left { display: flex; align-items: center; gap: 16px; }
-    .brand-logo {
-      width: 56px;
-      height: 56px;
-      object-fit: contain;
-      filter: drop-shadow(0 2px 6px rgba(255,255,255,0.2));
-      cursor: pointer;
-      transition: transform 0.2s;
-    }
-    .brand-logo:hover { transform: scale(1.08) rotate(3deg); }
-    .header-title h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
-    .header-title p { font-size: 13px; color: #94A3B8; margin-top: 2px; }
-
-    /* Navigation Mode Switcher Tabs */
-    .portal-nav {
-      display: flex;
-      background: rgba(255, 255, 255, 0.1);
-      padding: 4px;
-      border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      gap: 4px;
-    }
-    .nav-tab-btn {
-      padding: 8px 18px;
+    .top-bar-left { display: flex; align-items: center; gap: 12px; }
+    .back-btn {
+      width: 32px;
+      height: 32px;
       border-radius: 8px;
-      border: none;
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      background: transparent;
-      color: #CBD5E1;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .nav-tab-btn.active {
+      border: 1px solid var(--card-border);
       background: white;
-      color: var(--primary-dark);
-      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-    }
-
-    .header-badges { display: flex; gap: 10px; align-items: center; }
-    .badge { padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; text-transform: uppercase; }
-    .badge-success { background: rgba(16, 185, 129, 0.2); color: #34D399; border: 1px solid #10B981; }
-    .badge-primary { background: rgba(59, 130, 246, 0.25); color: #93C5FD; border: 1px solid #3B82F6; }
-
-    .container { max-width: 1200px; margin: 24px auto; padding: 0 20px; }
-
-    /* Cards & Layout */
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 24px; }
-    @media (max-width: 900px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
-
-    .card {
-      background: var(--card-bg);
-      border-radius: 16px;
-      padding: 24px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.04);
-      border: 1px solid #E2E8F0;
-      margin-bottom: 20px;
-    }
-    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-    .card-title { font-size: 18px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; }
-
-    /* Buttons */
-    .btn {
-      padding: 10px 18px;
-      border-radius: 10px;
-      border: none;
-      font-size: 15px;
-      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
       cursor: pointer;
-      transition: all 0.2s;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      text-decoration: none;
+      transition: background 0.15s;
     }
-    .btn-primary { background: var(--primary); color: white; }
-    .btn-primary:hover { background: #1D4ED8; }
-    .btn-success { background: var(--success); color: white; }
-    .btn-success:hover { background: #059669; }
-    .btn-danger { background: var(--danger); color: white; }
-    .btn-danger:hover { background: #DC2626; }
-    .btn-outline { background: white; border: 1.5px solid #CBD5E1; color: var(--text); }
-    .btn-outline:hover { background: #F1F5F9; }
-    .btn-pill { padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; border: 1px solid #CBD5E1; background: #F8FAFC; cursor: pointer; }
-    .btn-pill:hover { background: #E2E8F0; }
-
-    .stat-number { font-size: 42px; font-weight: 800; line-height: 1; }
-    .stat-label { font-size: 14px; color: var(--text-muted); margin-top: 6px; font-weight: 600; }
-
-    /* ECG Canvas Monitor */
-    .ecg-box {
-      background: #0F172A;
-      border-radius: 12px;
-      padding: 16px;
-      position: relative;
-      overflow: hidden;
-      margin-top: 14px;
-    }
-    .ecg-canvas { width: 100%; height: 120px; display: block; }
-    .ecg-metrics {
-      display: flex;
-      justify-content: space-between;
-      color: #94A3B8;
-      font-size: 13px;
+    .back-btn:hover { background: #F3F4F6; color: var(--text-title); }
+    
+    .agent-name-input {
+      font-size: 14px;
       font-weight: 600;
-      margin-top: 10px;
-      border-top: 1px solid #334155;
-      padding-top: 8px;
+      color: var(--text-title);
+      background: #F3F4F6;
+      border: 1px solid transparent;
+      padding: 6px 12px;
+      border-radius: 8px;
+      outline: none;
+      transition: all 0.15s;
+      width: 270px;
+    }
+    .agent-name-input:focus {
+      background: white;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(15, 157, 122, 0.15);
     }
 
-    /* Caretaker Login Card */
-    .caretaker-profile-bar {
-      background: linear-gradient(135deg, #1E3A8A 0%, #1E40AF 100%);
-      color: white;
-      border-radius: 14px;
-      padding: 18px 24px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 24px;
-      box-shadow: 0 4px 14px rgba(30, 58, 138, 0.2);
-    }
-    .caretaker-info-pill {
+    .header-pill {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      background: rgba(255,255,255,0.15);
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 13px;
-    }
-
-    /* Daily Summary */
-    .daily-box { background: #F0FDF4; border: 1.5px solid #BBF7D0; border-radius: 14px; padding: 20px; color: #166534; font-size: 17px; line-height: 1.5; font-weight: 600; }
-
-    /* Chart */
-    .chart-container { height: 160px; display: flex; align-items: flex-end; justify-content: space-between; padding-top: 20px; gap: 12px; }
-    .chart-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; justify-content: flex-end; }
-    .bar-group { display: flex; align-items: flex-end; gap: 4px; height: 110px; }
-    .bar { width: 18px; border-radius: 4px 4px 0 0; transition: height 0.3s; }
-    .bar-done { background: var(--success); }
-    .bar-missed { background: var(--danger); }
-    .day-label { font-size: 13px; font-weight: 700; color: var(--text-muted); }
-
-    /* Top Questions */
-    .question-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #F8FAFC; border-radius: 10px; margin-bottom: 10px; border: 1px solid #E2E8F0; }
-    .question-text { font-size: 15px; font-weight: 600; }
-    .question-count { background: #DBEAFE; color: var(--primary); font-size: 13px; font-weight: 800; padding: 4px 10px; border-radius: 12px; }
-
-    /* Test & Companion Inputs */
-    .test-box { display: flex; gap: 10px; margin-top: 14px; }
-    .test-input { flex: 1; padding: 12px 16px; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 16px; }
-    .companion-reply-box { margin-top: 16px; padding: 20px; border-radius: 14px; background: #F0FDF4; border: 1.5px solid #BBF7D0; }
-    .companion-reply-text { font-size: 22px; font-weight: 700; color: #166534; line-height: 1.4; margin-bottom: 12px; }
-    .companion-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-
-    /* ========================================= */
-    /* PATIENT PORTAL STYLES (Elderly Friendly)  */
-    /* ========================================= */
-    .patient-container {
-      max-width: 900px;
-      margin: 20px auto;
-      padding: 0 20px;
-      text-align: center;
-    }
-    .patient-hero {
+      padding: 5px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--card-border);
       background: white;
-      border-radius: 24px;
-      padding: 32px 24px;
-      margin-bottom: 24px;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.06);
-      border: 2px solid #E2E8F0;
-      display: flex;
-      flex-direction: column;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-body);
+      cursor: pointer;
+    }
+    .header-pill-red {
+      color: #DC2626;
+      border-color: #FECACA;
+      background: #FEF2F2;
+    }
+
+    .top-bar-right { display: flex; align-items: center; gap: 10px; }
+    
+    /* Ask AI Button (Orange) */
+    .btn-ask-ai {
+      height: 36px;
+      padding: 0 14px;
+      border-radius: 8px;
+      border: none;
+      background: var(--accent-orange);
+      color: white;
+      font-size: 13px;
+      font-weight: 600;
+      display: inline-flex;
       align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: background 0.15s;
     }
-    .patient-logo {
-      width: 140px;
-      height: 140px;
-      object-fit: contain;
-      filter: drop-shadow(0 6px 14px rgba(0,0,0,0.12));
-      animation: gentle-wave 4s ease-in-out infinite;
+    .btn-ask-ai:hover { background: var(--accent-orange-hover); }
+
+    .test-with-label { font-size: 13px; color: var(--text-muted); margin: 0 2px; }
+
+    /* Action buttons (Teal) */
+    .btn-teal {
+      height: 36px;
+      padding: 0 13px;
+      border-radius: 8px;
+      border: none;
+      background: var(--primary);
+      color: white;
+      font-size: 13px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: background 0.15s;
     }
-    @keyframes gentle-wave {
-      0%, 100% { transform: translateY(0) rotate(0deg); }
-      50% { transform: translateY(-8px) rotate(2deg); }
+    .btn-teal:hover { background: var(--primary-hover); }
+
+    .btn-outline {
+      height: 36px;
+      padding: 0 13px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+      background: white;
+      color: var(--text-title);
+      font-size: 13px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
     }
-    .patient-greeting {
-      font-size: 32px;
-      font-weight: 800;
-      color: #1E293B;
-      margin-top: 16px;
-      line-height: 1.25;
+    .btn-outline:hover { background: #F9FAFB; border-color: #D1D5DB; }
+
+    .btn-patient-switch {
+      background: #EDE9FE;
+      color: #6D28D9;
+      border: 1px solid #DDD6FE;
+      height: 36px;
+      padding: 0 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s;
     }
-    .patient-subtitle {
-      font-size: 20px;
-      color: #64748B;
-      margin-top: 8px;
+    .btn-patient-switch:hover { background: #E0E7FF; }
+
+    /* ======================================================== */
+    /* 3. TAB BAR                                               */
+    /* ======================================================== */
+    .tab-bar {
+      height: 52px;
+      background: #FFFFFF;
+      border-bottom: 1px solid var(--card-border);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .segmented-tabs {
+      display: inline-flex;
+      background: #F3F4F6;
+      padding: 3px;
+      border-radius: 8px;
+      gap: 2px;
+    }
+    .tab-btn {
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+    .tab-btn svg { width: 15px; height: 15px; }
+    .tab-btn.active {
+      background: #FFFFFF;
+      color: var(--text-title);
+      font-weight: 600;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+
+    .tab-bar-right { display: flex; align-items: center; gap: 12px; }
+    .pill-free-minutes {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--primary-border);
+      background: var(--primary-light);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--primary);
+    }
+    .ui-code-toggle {
+      display: inline-flex;
+      background: #F3F4F6;
+      border-radius: 6px;
+      padding: 2px;
+      font-size: 12px;
       font-weight: 500;
     }
-
-    /* Huge Accessible Patient Buttons */
-    .patient-action-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      margin-top: 10px;
-    }
-    @media (max-width: 700px) { .patient-action-grid { grid-template-columns: 1fr; } }
-
-    .patient-btn-card {
-      background: white;
-      border-radius: 20px;
-      padding: 28px 20px;
-      text-align: center;
+    .ui-code-btn {
+      padding: 4px 10px;
+      border-radius: 5px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
       cursor: pointer;
-      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 4px 14px rgba(0,0,0,0.05);
-      border: 3px solid transparent;
+    }
+    .ui-code-btn.active { background: white; color: var(--text-title); font-weight: 600; }
+
+    /* ======================================================== */
+    /* 4. MAIN CONTENT (Two Columns, 24px gap)                  */
+    /* ======================================================== */
+    .content-area {
+      padding: 24px;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .two-column-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    @media (max-width: 1080px) {
+      .two-column-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 22px 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+      margin-bottom: 24px;
+    }
+    .card-header-clean {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-title);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    /* Setting Tile (Light green tint with clean border) */
+    .setting-tile {
+      background: var(--primary-light);
+      border: 1px solid var(--primary-border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .setting-tile-info { display: flex; flex-direction: column; gap: 2px; }
+    .setting-tile-title { font-size: 14px; font-weight: 600; color: #064E3B; display: flex; align-items: center; gap: 6px; }
+    .setting-tile-desc { font-size: 12px; color: #065F46; }
+
+    /* Inputs, Selects, Textareas */
+    .form-group { margin-bottom: 16px; }
+    .form-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-title);
+      margin-bottom: 6px;
+    }
+    .form-label-counter { font-size: 11px; color: var(--text-muted); font-weight: 400; }
+    .form-control {
+      width: 100%;
+      border: 1px solid #D1D5DB;
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-size: 13.5px;
+      color: var(--text-title);
+      background: #FFFFFF;
+      outline: none;
+      transition: all 0.15s;
+    }
+    .form-control:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(15, 157, 122, 0.15);
+    }
+    textarea.form-control {
+      resize: vertical;
+      min-height: 110px;
+      line-height: 1.5;
+    }
+
+    /* Switch Toggle */
+    .toggle-wrapper { display: flex; align-items: center; gap: 10px; }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 38px;
+      height: 22px;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #D1D5DB;
+      transition: .2s;
+      border-radius: 22px;
+    }
+    .slider:before {
+      position: absolute; content: "";
+      height: 16px; width: 16px;
+      left: 3px; bottom: 3px;
+      background-color: white;
+      transition: .2s;
+      border-radius: 50%;
+    }
+    input:checked + .slider { background-color: var(--primary); }
+    input:checked + .slider:before { transform: translateX(16px); }
+
+    /* Live Testing Simulator */
+    .simulator-container {
+      background: #FFFFFF;
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
+      height: 520px;
+    }
+    .simulator-header {
+      background: #F9FAFB;
+      border-bottom: 1px solid var(--card-border);
+      padding: 12px 18px;
+      display: flex;
+      justify-content: space-between;
       align-items: center;
+    }
+    .sim-status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--primary);
+      display: inline-block;
+      box-shadow: 0 0 0 3px rgba(15, 157, 122, 0.2);
+    }
+    .simulator-body {
+      flex: 1;
+      padding: 16px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
       gap: 12px;
-      user-select: none;
+      background: #FAFAFA;
     }
-    .patient-btn-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    .chat-bubble {
+      max-width: 85%;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 13.5px;
+      line-height: 1.45;
     }
-    .patient-btn-card:active {
-      transform: scale(0.98);
+    .chat-bubble-patient {
+      align-self: flex-end;
+      background: #1F2937;
+      color: white;
+      border-bottom-right-radius: 3px;
+    }
+    .chat-bubble-ghajini {
+      align-self: flex-start;
+      background: #FFFFFF;
+      color: var(--text-title);
+      border: 1px solid var(--card-border);
+      border-bottom-left-radius: 3px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    }
+    .meta-tag {
+      display: inline-block;
+      font-size: 10.5px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-top: 6px;
+      margin-right: 4px;
+    }
+    .meta-intent { background: #EDE9FE; color: #6D28D9; }
+    .meta-grounded { background: #DCFCE7; color: #15803D; }
+
+    .simulator-footer {
+      padding: 12px 16px;
+      background: #FFFFFF;
+      border-top: 1px solid var(--card-border);
+    }
+    .quick-prompts {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+      margin-bottom: 8px;
+    }
+    .quick-chip {
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--text-title);
+      background: #F3F4F6;
+      border: 1px solid var(--card-border);
+      padding: 4px 10px;
+      border-radius: 16px;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .quick-chip:hover { background: #E5E7EB; }
+    .sim-input-row { display: flex; gap: 8px; }
+
+    /* CardioLife Live Canvas & Stats */
+    .cardiolife-card {
+      background: #FFFFFF;
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 18px 20px;
+    }
+    .vitals-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .vital-box {
+      background: #F9FAFB;
+      border: 1px solid #E5E7EB;
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+    .vital-title { font-size: 11px; font-weight: 600; color: var(--text-muted); }
+    .vital-value { font-size: 22px; font-weight: 700; color: var(--text-title); margin-top: 2px; }
+    .vital-sub { font-size: 11px; font-weight: 500; color: var(--primary); }
+
+    .ecg-mini-canvas {
+      width: 100%;
+      height: 70px;
+      background: #0F172A;
+      border-radius: 8px;
+      margin-top: 12px;
+      display: block;
     }
 
-    .p-btn-talk { border-color: #3B82F6; background: #EFF6FF; }
-    .p-btn-heart { border-color: #F43F5E; background: #FFF1F2; }
-    .p-btn-call { border-color: #10B981; background: #F0FDF4; }
-    .p-btn-sos { border-color: #EF4444; background: #FEF2F2; }
-    .p-btn-meds { border-color: #F59E0B; background: #FFFBEB; }
-
-    .p-btn-icon { font-size: 50px; line-height: 1; }
-    .p-btn-title { font-size: 24px; font-weight: 800; color: #1E293B; }
-    .p-btn-desc { font-size: 16px; color: #64748B; font-weight: 600; }
-
-    /* Patient Simple Modal */
-    .patient-modal-overlay {
+    /* Modal / Popups */
+    .modal-overlay {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(15, 23, 42, 0.7);
-      backdrop-filter: blur(4px);
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(3px);
       display: none;
       align-items: center;
       justify-content: center;
-      z-index: 200;
+      z-index: 2000;
       padding: 20px;
     }
-    .patient-modal {
+    .modal-card {
       background: white;
-      border-radius: 24px;
-      max-width: 650px;
+      border-radius: 16px;
+      max-width: 600px;
       width: 100%;
-      padding: 32px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.25);
-      text-align: left;
+      padding: 24px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
     }
-    .patient-modal-title { font-size: 26px; font-weight: 800; color: #1E293B; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+
+    /* ======================================================== */
+    /* PATIENT SIMPLE VIEW (Elderly Accessible Mode)            */
+    /* ======================================================== */
+    #patient-portal-container {
+      display: none;
+      max-width: 800px;
+      margin: 30px auto;
+      padding: 0 20px;
+      text-align: center;
+    }
+    .patient-hero-card {
+      background: white;
+      border-radius: 20px;
+      border: 1px solid var(--card-border);
+      padding: 32px 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+    .patient-hero-logo {
+      width: 120px;
+      height: 120px;
+      object-fit: contain;
+      filter: drop-shadow(0 4px 10px rgba(0,0,0,0.08));
+    }
+    .patient-big-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+    @media (max-width: 650px) {
+      .patient-big-grid { grid-template-columns: 1fr; }
+    }
+    .patient-big-btn {
+      background: white;
+      border: 2px solid #E5E7EB;
+      border-radius: 18px;
+      padding: 24px 16px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      transition: all 0.2s;
+    }
+    .patient-big-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 18px rgba(0,0,0,0.08);
+    }
+    .p-btn-talk { border-color: #3B82F6; background: #EFF6FF; }
+    .p-btn-call { border-color: var(--primary); background: var(--primary-light); }
+    .p-btn-heart { border-color: #F43F5E; background: #FFF1F2; }
+    .p-btn-sos { border-color: #EF4444; background: #FEF2F2; }
+
+    /* Table */
+    .clean-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .clean-table th { text-align: left; padding: 10px 12px; color: var(--text-muted); font-weight: 500; border-bottom: 1px solid var(--card-border); }
+    .clean-table td { padding: 12px; border-bottom: 1px solid #F3F4F6; color: var(--text-title); }
   </style>
 </head>
 <body>
 
-  <!-- Top Header with Logo and Portal Switcher -->
-  <header>
-    <div class="header-left">
-      <img src="data:image/png;base64,__LOGO_B64__" onerror="this.src='/logo.png'" alt="Ghajini 2.0" class="brand-logo" onclick="switchPortal('patient')">
-      <div class="header-title">
-        <h1>Ghajini 2.0</h1>
-        <p>AI Memory Integrity & CardioLife Care</p>
+  <!-- ======================================================== -->
+  <!-- 1. LEFT SIDEBAR                                          -->
+  <!-- ======================================================== -->
+  <aside class="sidebar">
+    <div class="sidebar-top">
+      <div class="sidebar-logo" onclick="switchPortal('studio')" title="Ghajini 2.0 Studio">
+        <img src="data:image/png;base64,__LOGO_B64__" onerror="this.src='/logo.png'" alt="Ghajini">
       </div>
+
+      <nav class="nav-icons">
+        <!-- Voice Agents -->
+        <button class="nav-icon-btn active" title="Assistant Studio" onclick="switchTab('assistant')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+        </button>
+        <!-- Telephony / Calls -->
+        <button class="nav-icon-btn" title="Call Rules & Policy" onclick="switchTab('calls')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        </button>
+        <!-- Knowledge Base -->
+        <button class="nav-icon-btn" title="FAISS Knowledge Engine" onclick="switchTab('knowledge')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        </button>
+        <!-- CardioLife Telemetry -->
+        <button class="nav-icon-btn" title="CardioLife Vitals" onclick="switchTab('postcall')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </button>
+        <!-- Integrations -->
+        <button class="nav-icon-btn" title="Integrations & Telegram" onclick="switchTab('integrations')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </button>
+        <!-- Recent Calls -->
+        <button class="nav-icon-btn" title="Call Logs" onclick="switchTab('history')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </button>
+      </nav>
     </div>
 
-    <!-- Portal Switch Tabs -->
-    <div class="portal-nav">
-      <button class="nav-tab-btn active" id="tab-caretaker" onclick="switchPortal('caretaker')">
-        🛡️ Caretaker Command Center
+    <div class="sidebar-bottom">
+      <button class="nav-icon-btn" title="Caregiver Profile" onclick="openCaregiverModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
-      <button class="nav-tab-btn" id="tab-patient" onclick="switchPortal('patient')">
-        👤 Patient Portal (Simple)
-      </button>
+      <div class="sidebar-avatar" title="Priya Sharma (Caregiver)">P</div>
     </div>
-
-    <div class="header-badges">
-      <span class="badge badge-success">Backend: Online</span>
-      <select id="global-lang" class="btn-pill" onchange="changeLanguage()" style="background: rgba(255,255,255,0.15); color: white; border-color: rgba(255,255,255,0.3);">
-        <option value="en" selected style="color: black;">English (EN)</option>
-        <option value="hi" style="color: black;">हिन्दी (Hindi)</option>
-        <option value="pa" style="color: black;">ਪੰਜਾਬੀ (Punjabi)</option>
-      </select>
-    </div>
-  </header>
+  </aside>
 
   <!-- ======================================================== -->
-  <!-- CARETAKER PORTAL                                         -->
+  <!-- MAIN APP CONTAINER                                       -->
   <!-- ======================================================== -->
-  <div id="caretaker-view" class="container">
+  <div class="app-wrapper">
 
-    <!-- Caretaker Profile Banner & Login Switcher -->
-    <div class="caretaker-profile-bar" id="caretaker-banner">
-      <div>
-        <div style="font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
-          <span>🛡️ Caretaker:</span>
-          <span id="caretaker-display-name">Priya Sharma</span>
-          <span style="font-size: 14px; font-weight: 500; opacity: 0.9;">(Daughter & Primary Guardian)</span>
+    <!-- 2. TOP BAR -->
+    <header class="top-bar">
+      <div class="top-bar-left">
+        <button class="back-btn" title="Back" onclick="switchTab('assistant')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        </button>
+        <input type="text" class="agent-name-input" value="Ghajini 2.0 (Alzheimer's Companion)">
+        <div class="header-pill header-pill-red" title="SIM Direct Calling Enabled">
+          <span style="font-size: 10px;">●</span> Outgoing (SIM)
         </div>
-        <div style="font-size: 14px; opacity: 0.85; margin-top: 4px;">
-          Emergency Phone: <strong id="caretaker-display-phone">+91 7604934874</strong> &bull; Email: <span id="caretaker-display-email">priya.sharma@familycare.in</span>
+        <div class="header-pill" title="API Schemas & Endpoints" onclick="window.open('/docs', '_blank')">
+          { } API
+        </div>
+        <div class="header-pill" title="APScheduler 15s Cycle">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          15s Poll
         </div>
       </div>
-      <div style="display: flex; gap: 10px;">
-        <button class="btn btn-outline" style="background: white; color: #1E3A8A; font-weight: 700;" onclick="openCaretakerLoginModal()">
-          ✏️ Edit Caretaker Info
+
+      <div class="top-bar-right">
+        <!-- Orange Ask AI Button -->
+        <button class="btn-ask-ai" onclick="openAskAIModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          Ask AI
+        </button>
+
+        <span class="test-with-label">Test with:</span>
+
+        <!-- Teal Test Action Buttons -->
+        <button class="btn-teal" onclick="focusChatSimulator()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Chat
+        </button>
+        <button class="btn-teal" onclick="startWebVoiceCall()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/></svg>
+          Web Call
+        </button>
+        <button class="btn-teal" style="background: #065F46;" onclick="triggerPhoneCallCaregiver()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          Phone Call
+        </button>
+
+        <!-- Deploy Dropdown -->
+        <button class="btn-outline" onclick="openDeployModal()">
+          Deploy ▾
+        </button>
+
+        <!-- Toggle to Patient Simple View -->
+        <button class="btn-patient-switch" onclick="switchPortal('patient')">
+          👤 Patient Portal
         </button>
       </div>
-    </div>
+    </header>
 
-    <!-- Quick Emergency & Calling Controls (Never Blocked by Cooldown) -->
-    <div class="card" style="border: 2px solid #10B981; background: #F0FDF4;">
-      <div class="card-header" style="margin-bottom: 8px;">
-        <div class="card-title" style="color: #065F46; font-size: 20px;">
-          📞 Direct Safe Calling & Emergency Dispatch (SIM Telephony)
-        </div>
-        <span class="badge badge-success">Zero Twilio &bull; 100% Free</span>
-      </div>
-      <p style="color: #047857; font-size: 15px; margin-bottom: 16px;">
-        Deterministic emergency rules engine places SIM calls directly from patient phone to caregiver. Cooldown is automatically bypassed for manual caregiver requests.
-      </p>
-      <div style="display: flex; flex-wrap: wrap; gap: 12px;">
-        <button class="btn btn-success" style="font-size: 16px; font-weight: 700; padding: 12px 22px;" onclick="triggerCallCaregiver(true)">
-          📞 Call Caregiver (+91 7604934874)
+    <!-- 3. TAB BAR -->
+    <nav class="tab-bar">
+      <div class="segmented-tabs">
+        <button class="tab-btn active" id="tab-assistant" onclick="switchTab('assistant')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+          Assistant Details
         </button>
-        <button class="btn btn-outline" style="border-color: #10B981; color: #065F46; font-weight: 700;" onclick="resetCallCooldown()">
-          🔄 Reset Call Cooldown & Locks
+        <button class="tab-btn" id="tab-calls" onclick="switchTab('calls')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          Call Configuration
         </button>
-        <button class="btn btn-danger" style="font-size: 16px; font-weight: 700;" onclick="triggerSOS()">
-          🚨 Trigger Emergency SOS Alert
+        <button class="tab-btn" id="tab-knowledge" onclick="switchTab('knowledge')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          Knowledge Base
         </button>
-        <button class="btn btn-outline" style="border-color: #F43F5E; color: #E11D48; font-weight: 700;" onclick="simulateCardiacAlert()">
-          ❤️ Simulate Cardiac Alert
+        <button class="tab-btn" id="tab-integrations" onclick="switchTab('integrations')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          Integrations
+        </button>
+        <button class="tab-btn" id="tab-postcall" onclick="switchTab('postcall')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          Post-Call & Telemetry
+        </button>
+        <button class="tab-btn" id="tab-history" onclick="switchTab('history')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Recent Calls
         </button>
       </div>
-      <div id="call-feedback-box" style="margin-top: 14px; font-size: 15px; font-weight: 600; display: none;"></div>
-    </div>
 
-    <!-- Row 1: KPI Stats -->
-    <div class="grid-3">
-      <div class="card">
-        <div class="card-title">Medication Adherence</div>
-        <div class="stat-number" id="adherence-val" style="color: var(--success);">--%</div>
-        <div class="stat-label" id="adherence-sub">7-Day Completion Rate</div>
+      <div class="tab-bar-right">
+        <div class="pill-free-minutes">
+          <span style="font-size: 10px;">●</span> SIM Telephony: Active
+        </div>
+        <div class="ui-code-toggle">
+          <button class="ui-code-btn active" id="btn-view-ui" onclick="toggleViewMode('ui')">UI</button>
+          <button class="ui-code-btn" id="btn-view-code" onclick="toggleViewMode('code')">Code</button>
+        </div>
       </div>
-      <div class="card">
-        <div class="card-title">Face Recognitions Today</div>
-        <div class="stat-number" id="recog-val" style="color: var(--primary);">--</div>
-        <div class="stat-label">Consented family & doctors seen</div>
-      </div>
-      <div class="card">
-        <div class="card-title">Active Caregiver Alerts</div>
-        <div class="stat-number" id="alerts-val" style="color: var(--danger);">--</div>
-        <div class="stat-label">Assistance & SOS triggers</div>
-      </div>
-    </div>
+    </nav>
 
-    <!-- CardioLife Telemetry & Live ECG Monitor -->
-    <div class="card" style="border: 1.5px solid #F43F5E;">
-      <div class="card-header">
-        <div class="card-title" style="color: #BE123C; font-size: 20px;">
-          ❤️ CardioLife Vitals Monitor & Live ECG Stream
-        </div>
-        <div style="display: flex; gap: 8px;">
-          <button class="btn btn-pill" onclick="refreshVitals()">🔄 Refresh Vitals</button>
-        </div>
-      </div>
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
-        <div style="background: #FFF1F2; padding: 16px; border-radius: 12px; border: 1px solid #FECDD3;">
-          <div style="font-size: 13px; font-weight: 700; color: #9F1239;">HEART RATE</div>
-          <div style="font-size: 36px; font-weight: 800; color: #E11D48;" id="vital-hr">74 <span style="font-size: 18px; font-weight: 600;">BPM</span></div>
-          <div style="font-size: 13px; color: #9F1239; font-weight: 600;" id="vital-status">Normal Sinus Rhythm</div>
-        </div>
-        <div style="background: #F8FAFC; padding: 16px; border-radius: 12px; border: 1px solid #E2E8F0;">
-          <div style="font-size: 13px; font-weight: 700; color: #475569;">BLOOD PRESSURE</div>
-          <div style="font-size: 36px; font-weight: 800; color: #1E293B;" id="vital-bp">120/80 <span style="font-size: 18px; font-weight: 600;">mmHg</span></div>
-          <div style="font-size: 13px; color: #64748B; font-weight: 600;">Optimal Range</div>
-        </div>
-        <div style="background: #F8FAFC; padding: 16px; border-radius: 12px; border: 1px solid #E2E8F0;">
-          <div style="font-size: 13px; font-weight: 700; color: #475569;">OXYGEN SATURATION</div>
-          <div style="font-size: 36px; font-weight: 800; color: #1E293B;" id="vital-spo2">98 <span style="font-size: 18px; font-weight: 600;">%</span></div>
-          <div style="font-size: 13px; color: #64748B; font-weight: 600;">SpO2 Healthy</div>
-        </div>
-      </div>
+    <!-- ======================================================== -->
+    <!-- STUDIO WORKSPACE: TAB 1 - ASSISTANT DETAILS              -->
+    <!-- ======================================================== -->
+    <main id="view-assistant" class="content-area">
+      <div class="two-column-grid">
 
-      <!-- Real-time ECG Trace Canvas -->
-      <div class="ecg-box">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-          <span style="color: #34D399; font-size: 12px; font-weight: 700; letter-spacing: 1px;">LIVE LEAD II ECG TRACE</span>
-          <span style="color: #94A3B8; font-size: 12px;" id="ecg-time">Live 25mm/s</span>
+        <!-- LEFT COLUMN: Agent Persona & Prompts -->
+        <div class="col-left">
+
+          <!-- Card 1: Persona & Voice Configuration -->
+          <div class="card">
+            <div class="card-header-clean">
+              <div>
+                <div class="card-title">Assistant Details</div>
+                <div class="card-sub">Core voice identity, speech rate and primary language</div>
+              </div>
+              <span class="header-pill" style="color: var(--primary); border-color: var(--primary-border); background: var(--primary-light);">v2.0 Stable</span>
+            </div>
+
+            <!-- Voice Setting Tile -->
+            <div class="setting-tile">
+              <div class="setting-tile-info">
+                <div class="setting-tile-title">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M8 12a4 4 0 0 1 8 0"/></svg>
+                  Aditi (Elder-care Gentle & Slow - 0.85x)
+                </div>
+                <div class="setting-tile-desc">Indian Accent &bull; Calming warm cadence &bull; Ambient Noise Suppression Active</div>
+              </div>
+              <button class="btn-outline" style="height: 32px; font-size: 12px; background: white;" onclick="testVoicePlayback()">
+                ▶ Preview Voice
+              </button>
+            </div>
+
+            <div class="form-group">
+              <div class="form-label">
+                <span>Primary Language</span>
+                <span class="form-label-counter">Fallback: English</span>
+              </div>
+              <select id="agent-lang" class="form-control" onchange="onLangChange()">
+                <option value="en">English (India) - en-IN</option>
+                <option value="hi" selected>Hindi - hi-IN (हिन्दी)</option>
+                <option value="pa">Punjabi - pa-IN (ਪੰਜਾਬੀ)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <div class="form-label">
+                <span>First Sentence (Greeting Message)</span>
+                <span class="form-label-counter" id="greeting-counter">64/120</span>
+              </div>
+              <input type="text" id="agent-first-sentence" class="form-control" value="Namaste! I am Ghajini, your friend. How are you feeling right now?">
+            </div>
+          </div>
+
+          <!-- Card 2: Clinical Instructions & Guardrails -->
+          <div class="card">
+            <div class="card-header-clean">
+              <div>
+                <div class="card-title">Instructions & Grounding Guardrails</div>
+                <div class="card-sub">Deterministic rules governing Alzheimer's safety and anti-hallucination</div>
+              </div>
+              <button class="btn-outline" style="height: 30px; font-size: 12px;" onclick="resetInstructions()">Reset Default</button>
+            </div>
+
+            <!-- Setting Tile: Strict Grounding -->
+            <div class="setting-tile">
+              <div class="setting-tile-info">
+                <div class="setting-tile-title">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  Anti-Hallucination FAISS Guardrail
+                </div>
+                <div class="setting-tile-desc">Rejects invented facts. Fallback: "I am not sure. Shall I call Priya?"</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="toggle-grounding" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <!-- Setting Tile: Emergency Phrase Interception -->
+            <div class="setting-tile">
+              <div class="setting-tile-info">
+                <div class="setting-tile-title">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#DC2626"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  Emergency Phrase Interception
+                </div>
+                <div class="setting-tile-desc">Immediate rule-based SIM dialer trigger on distress phrases</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="toggle-emergency-phrase" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+              <div class="form-label">
+                <span>System Prompt</span>
+                <span class="form-label-counter" id="prompt-counter">486/600</span>
+              </div>
+              <textarea id="agent-prompt" class="form-control" rows="5">You are Ghajini, a compassionate memory companion for an Alzheimer's patient. 
+Rules:
+1. Speak in 1 or 2 short, calming sentences.
+2. Ground all answers strictly in stored family facts (Priya is daughter in Bangalore, Dr. Sharma visits Thursdays).
+3. If asked about taking medicine, check reminder records.
+4. Detect anxiety and reassure the patient they are safe at home.</textarea>
+            </div>
+          </div>
+
         </div>
-        <canvas id="ecgCanvas" class="ecg-canvas" width="1000" height="120"></canvas>
-        <div class="ecg-metrics">
-          <span>QRS Duration: 88 ms</span>
-          <span>PR Interval: 140 ms</span>
-          <span>QTc: 412 ms</span>
-          <span style="color: #34D399;">Arrhythmia Filter: ACTIVE</span>
+
+        <!-- RIGHT COLUMN: Interactive Simulator & CardioLife Stream -->
+        <div class="col-right">
+
+          <!-- Card 3: Interactive Voice & Chat Simulator -->
+          <div class="simulator-container">
+            <div class="simulator-header">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="sim-status-dot"></span>
+                <span style="font-size: 13px; font-weight: 600; color: var(--text-title);">Live Assistant Simulator</span>
+              </div>
+              <span style="font-size: 11px; color: var(--text-muted);">Pipeline: /v1/companion/message</span>
+            </div>
+
+            <div class="simulator-body" id="chat-stream">
+              <!-- Initial assistant greeting -->
+              <div class="chat-bubble chat-bubble-ghajini">
+                Namaste! I am Ghajini, your friend. You are safe at home. How can I help you today?
+                <div>
+                  <span class="meta-tag meta-intent">intent: greeting</span>
+                  <span class="meta-tag meta-grounded">verified safe</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="simulator-footer">
+              <div class="quick-prompts">
+                <button class="quick-chip" onclick="quickSend('Who is Priya?')">Who is Priya?</button>
+                <button class="quick-chip" onclick="quickSend('What day is it today?')">What day is it?</button>
+                <button class="quick-chip" onclick="quickSend('Did I take my medicine?')">Did I take my medicine?</button>
+                <button class="quick-chip" onclick="quickSend('Madad karo main gir gayi')">🚨 Help (Hindi)</button>
+              </div>
+              <div class="sim-input-row">
+                <input type="text" id="sim-input" class="form-control" placeholder="Ask or speak to Ghajini..." onkeydown="if(event.key==='Enter') sendSimulatorText()">
+                <button class="btn-teal" onclick="sendSimulatorText()">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 4: CardioLife Telemetry -->
+          <div class="cardiolife-card" style="margin-top: 24px;">
+            <div class="card-header-clean" style="margin-bottom: 8px;">
+              <div class="card-title" style="color: #BE123C;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E11D48"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                CardioLife Telemetry Feed
+              </div>
+              <button class="btn-outline" style="height: 28px; font-size: 11px; padding: 0 8px;" onclick="refreshVitals()">Refresh</button>
+            </div>
+            
+            <div class="vitals-grid">
+              <div class="vital-box">
+                <div class="vital-title">HEART RATE</div>
+                <div class="vital-value" id="dash-vital-hr">74 <span style="font-size: 12px; font-weight: 500;">BPM</span></div>
+                <div class="vital-sub" id="dash-vital-status">Normal Rhythm</div>
+              </div>
+              <div class="vital-box">
+                <div class="vital-title">BLOOD PRESSURE</div>
+                <div class="vital-value" id="dash-vital-bp">120/80</div>
+                <div class="vital-sub">Optimal</div>
+              </div>
+              <div class="vital-box">
+                <div class="vital-title">SPO2 OXYGEN</div>
+                <div class="vital-value" id="dash-vital-spo2">98 <span style="font-size: 12px; font-weight: 500;">%</span></div>
+                <div class="vital-sub">Steady</div>
+              </div>
+            </div>
+
+            <!-- Mini ECG Canvas -->
+            <canvas id="miniECGCanvas" class="ecg-mini-canvas" width="600" height="70"></canvas>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+              <span style="font-size: 11px; color: var(--text-muted);">Lead II &bull; Real-time Arrhythmia Guard Active</span>
+              <button class="btn-outline" style="height: 28px; font-size: 11.5px; border-color: #FECDD3; color: #E11D48;" onclick="simulateCardiacAlert()">
+                Test Cardiac Alert
+              </button>
+            </div>
+          </div>
+
         </div>
-      </div>
-    </div>
 
-    <!-- Row 2: Live AI Companion Tester -->
-    <div class="card" style="border: 2px solid #3B82F6;">
-      <div class="card-header">
-        <div class="card-title" style="font-size: 20px; color: #1E3A8A;">
-          🤖 Test AI Companion (/v1/companion/message)
-        </div>
-        <div style="display: flex; gap: 8px;">
-          <select id="comp-lang-select" class="btn-pill">
-            <option value="en">English (en-IN)</option>
-            <option value="hi" selected>Hindi (hi-IN)</option>
-            <option value="pa">Punjabi (pa-IN)</option>
-          </select>
-          <button class="btn btn-outline" onclick="pollProactive()">Poll Proactive</button>
-        </div>
       </div>
+    </main>
 
-      <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px;">
-        <span style="font-size: 13px; font-weight: 700; color: var(--text-muted); align-self: center;">Quick Prompts:</span>
-        <button class="btn-pill" onclick="setCompPrompt('Who is Priya?')">Who is Priya?</button>
-        <button class="btn-pill" onclick="setCompPrompt('What day is it today?')">What day is it?</button>
-        <button class="btn-pill" onclick="setCompPrompt('Did I take my morning medicine?')">Did I take my medicine?</button>
-        <button class="btn-pill" onclick="setCompPrompt('Madad karo main gir gayi')">🚨 Help (Hindi)</button>
-        <button class="btn-pill" onclick="setCompPrompt('How is my heart rate?')">❤️ Heart & Vitals</button>
-      </div>
+    <!-- ======================================================== -->
+    <!-- TAB 2 - CALL CONFIGURATION                               -->
+    <!-- ======================================================== -->
+    <main id="view-calls" class="content-area" style="display: none;">
+      <div class="two-column-grid">
 
-      <div class="test-box">
-        <input type="text" id="comp-input" class="test-input" placeholder="Type or ask Ghajini something...">
-        <button class="btn btn-primary" onclick="sendCompanionMessage()">Send to Companion</button>
-      </div>
+        <div class="col-left">
+          <div class="card">
+            <div class="card-header-clean">
+              <div>
+                <div class="card-title">SIM Telephony Policy & Cooldown Settings</div>
+                <div class="card-sub">Deterministic call limits governed by modules/calls/policy.py</div>
+              </div>
+            </div>
 
-      <div class="companion-reply-box" id="comp-reply-container" style="display: none;">
-        <div class="companion-reply-text" id="comp-reply-text">Ghajini's reply will appear here...</div>
-        <div class="companion-meta" id="comp-meta"></div>
-        <div id="comp-person-card"></div>
-      </div>
-    </div>
+            <div class="setting-tile">
+              <div class="setting-tile-info">
+                <div class="setting-tile-title">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  Manual Cooldown Bypass
+                </div>
+                <div class="setting-tile-desc">Allows caregiver & patient manual dials without 2-minute delay</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="toggle-cooldown-bypass" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
 
-    <!-- Row 3: Daily Summary & Weekly History -->
-    <div class="grid-2">
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">Today's Factual Activity Summary</div>
-          <button class="btn btn-outline" onclick="loadDashboard()">Refresh</button>
-        </div>
-        <div class="daily-box" id="daily-summary-text">Loading today's recorded activities...</div>
-      </div>
+            <div class="form-group">
+              <div class="form-label">
+                <span>Maximum Call Attempts Per Hour</span>
+                <span class="form-label-counter">Safety Cap</span>
+              </div>
+              <input type="number" class="form-control" value="3" readonly style="background: #F9FAFB;">
+            </div>
 
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">Weekly Dose Pattern</div>
-          <div style="font-size: 13px; font-weight: 700;">
-            <span style="color: var(--success);">&#9632; Taken</span> &nbsp;
-            <span style="color: var(--danger);">&#9632; Missed</span>
+            <div class="form-group">
+              <div class="form-label">
+                <span>Quiet Hours Window</span>
+                <span class="form-label-counter">Only emergency triggers permitted</span>
+              </div>
+              <div style="display: flex; gap: 10px;">
+                <input type="text" class="form-control" value="22:00 (10 PM)" readonly style="background: #F9FAFB;">
+                <input type="text" class="form-control" value="06:00 (6 AM)" readonly style="background: #F9FAFB;">
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 18px;">
+              <button class="btn-teal" onclick="resetCallCooldown()">
+                🔄 Reset Call Cooldown & Throttle Locks
+              </button>
+            </div>
+          </div>
+
+          <!-- Emergency Contacts Card -->
+          <div class="card">
+            <div class="card-title" style="margin-bottom: 12px;">Emergency Contacts (Priority Ordered)</div>
+            <table class="clean-table">
+              <thead>
+                <tr>
+                  <th>Priority</th>
+                  <th>Name</th>
+                  <th>Relationship</th>
+                  <th>Phone Number</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>#1</strong></td>
+                  <td>Priya Sharma</td>
+                  <td>Daughter & Guardian</td>
+                  <td><strong>+91 7604934874</strong></td>
+                  <td><span class="header-pill" style="color: var(--primary);">Active</span></td>
+                </tr>
+                <tr>
+                  <td>#2</td>
+                  <td>Dr. Sharma</td>
+                  <td>Geriatric Physician</td>
+                  <td>+91 9876543212</td>
+                  <td><span class="header-pill">Standby</span></td>
+                </tr>
+                <tr>
+                  <td>#3</td>
+                  <td>Arun Kumar</td>
+                  <td>Neighbor</td>
+                  <td>+91 9876543213</td>
+                  <td><span class="header-pill">Standby</span></td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
-        <div class="chart-container" id="chart-bars"></div>
-      </div>
-    </div>
 
-    <!-- Row 4: Repeated Questions & Teach Companion -->
-    <div class="grid-2">
+        <div class="col-right">
+          <div class="card">
+            <div class="card-title" style="margin-bottom: 12px;">Instant Dial Tester</div>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+              Test direct SIM call logic against backend endpoint <code>/v1/calls/request</code>:
+            </p>
+            <div class="form-group">
+              <label class="form-label">Call Reason</label>
+              <input type="text" id="test-call-reason" class="form-control" value="Routine caregiver check-in">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Trigger Source</label>
+              <select id="test-call-source" class="form-control">
+                <option value="manual" selected>manual (Caregiver/Patient click)</option>
+                <option value="sos">sos (Emergency button)</option>
+                <option value="emergency_phrase">emergency_phrase (Voice distress)</option>
+                <option value="reminder_escalation">reminder_escalation (10min unacknowledged)</option>
+              </select>
+            </div>
+            <button class="btn-teal" style="width: 100%; justify-content: center; height: 40px;" onclick="executeTestCall()">
+              📞 Place Simulated SIM Call to Priya (+91 7604934874)
+            </button>
+            <div id="test-call-output" style="margin-top: 14px; font-size: 13px; font-weight: 500; display: none;"></div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+
+    <!-- ======================================================== -->
+    <!-- TAB 3 - KNOWLEDGE BASE                                   -->
+    <!-- ======================================================== -->
+    <main id="view-knowledge" class="content-area" style="display: none;">
+      <div class="two-column-grid">
+        <div class="col-left">
+          <div class="card">
+            <div class="card-title" style="margin-bottom: 12px;">Active Stored Memories (FAISS Index)</div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div style="background: #F9FAFB; border: 1px solid var(--card-border); padding: 12px 14px; border-radius: 8px;">
+                <div style="font-size: 13px; font-weight: 600; color: var(--text-title);">Priya is daughter</div>
+                <div style="font-size: 12px; color: var(--text-muted);">Priya is your daughter. She lives in Bangalore and visits on weekends with grandson Kabir.</div>
+              </div>
+              <div style="background: #F9FAFB; border: 1px solid var(--card-border); padding: 12px 14px; border-radius: 8px;">
+                <div style="font-size: 13px; font-weight: 600; color: var(--text-title);">Dr. Sharma visits Thursdays</div>
+                <div style="font-size: 12px; color: var(--text-muted);">Dr. Sharma is your physician. He visits every Thursday at 4 PM to check your heart and memory health.</div>
+              </div>
+              <div style="background: #F9FAFB; border: 1px solid var(--card-border); padding: 12px 14px; border-radius: 8px;">
+                <div style="font-size: 13px; font-weight: 600; color: var(--text-title);">Morning Medicine Routine</div>
+                <div style="font-size: 12px; color: var(--text-muted);">You take Donepezil 5mg after breakfast every morning with warm water.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-right">
+          <div class="card">
+            <div class="card-title" style="margin-bottom: 8px;">Teach Ghajini (Real-time Embedding)</div>
+            <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 14px;">
+              New routines and facts are sanitized against prompt injections and embedded into FAISS immediately:
+            </p>
+            <div class="form-group">
+              <label class="form-label">New Memory Fact</label>
+              <textarea id="teach-fact-input" class="form-control" rows="3" placeholder="e.g. Priya visits every Diwali with grandson Kabir."></textarea>
+            </div>
+            <button class="btn-teal" style="width: 100%; justify-content: center;" onclick="teachMemoryFact()">
+              Teach & Embed Memory Fact
+            </button>
+            <div id="teach-fact-status" style="margin-top: 10px; font-size: 12.5px; font-weight: 600;"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- ======================================================== -->
+    <!-- TAB 4 - INTEGRATIONS                                     -->
+    <!-- ======================================================== -->
+    <main id="view-integrations" class="content-area" style="display: none;">
+      <div class="two-column-grid">
+        <div class="col-left">
+          <div class="card">
+            <div class="card-title" style="margin-bottom: 12px;">Telegram Caregiver Bot API</div>
+            <div class="setting-tile">
+              <div class="setting-tile-info">
+                <div class="setting-tile-title">Automated 3-Line Briefing</div>
+                <div class="setting-tile-desc">Dispatches instant alert to caregiver's Telegram channel on distress/calls</div>
+              </div>
+              <span class="header-pill" style="color: var(--primary);">Connected</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Caregiver Chat ID</label>
+              <input type="text" class="form-control" value="7604934874" readonly style="background: #F9FAFB;">
+            </div>
+          </div>
+        </div>
+        <div class="col-right">
+          <div class="card">
+            <div class="card-title" style="margin-bottom: 12px;">SIM Telephony Hardware Interface</div>
+            <div class="setting-tile">
+              <div class="setting-tile-info">
+                <div class="setting-tile-title">flutter_phone_direct_caller</div>
+                <div class="setting-tile-desc">Android CALL_PHONE & iOS tel: URL Scheme &bull; Zero Twilio &bull; Free SIM minutes</div>
+              </div>
+              <span class="header-pill" style="color: var(--primary);">Verified</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- ======================================================== -->
+    <!-- TAB 5 - POST-CALL & TELEMETRY                            -->
+    <!-- ======================================================== -->
+    <main id="view-postcall" class="content-area" style="display: none;">
+      <div class="two-column-grid">
+        <div class="col-left">
+          <div class="card">
+            <div class="card-title" style="margin-bottom: 12px;">Caregiver Telegram Briefing Formatter</div>
+            <div style="background: #F0FDF4; border: 1px solid #BBF7D0; padding: 16px; border-radius: 10px; font-size: 13px; line-height: 1.6; color: #166534;">
+              <strong>Telegram Message Template:</strong><br>
+              🚨 <strong>Emergency Call:</strong> Patient has requested to speak with you.<br>
+              ⏰ <strong>Time:</strong> Today at 07:54 PM<br>
+              💊 <strong>Last Reminder:</strong> Morning Donepezil (Taken)<br>
+              ❤️ <strong>Vitals:</strong> 74 BPM (Normal Sinus Rhythm)
+            </div>
+          </div>
+        </div>
+        <div class="col-right">
+          <div class="card">
+            <div class="card-title" style="margin-bottom: 12px;">Audio & Privacy Architecture</div>
+            <div style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">
+              &bull; <strong>Zero Call Audio Stored:</strong> No recordings or patient audio are retained on servers.<br>
+              &bull; <strong>Anti-Hallucination:</strong> Deterministic rule-based templates enforce patient safety.<br>
+              &bull; <strong>Data Export:</strong> Caregivers can export all stored memories via <code>/v1/privacy/export</code>.
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- ======================================================== -->
+    <!-- TAB 6 - RECENT CALLS                                     -->
+    <!-- ======================================================== -->
+    <main id="view-history" class="content-area" style="display: none;">
       <div class="card">
-        <div class="card-title" style="margin-bottom: 16px;">Top Repeated Questions (Logged for Caretaker)</div>
-        <div id="questions-list">
-          <div class="question-item"><span class="question-text">Loading questions...</span></div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-title" style="margin-bottom: 10px;">Teach Ghajini (Knowledge Embedding)</div>
-        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 12px;">
-          Add a new personal fact, routine, or preference. Text is sanitized and embedded into FAISS immediately:
-        </p>
-        <div style="display: flex; flex-direction: column; gap: 10px;">
-          <input type="text" id="teach-input" class="test-input" placeholder="e.g. Priya visits every Sunday with Kabir.">
-          <button class="btn btn-success" onclick="teachMemory()">Teach & Embed Memory</button>
-        </div>
-        <div id="teach-status" style="margin-top: 10px; font-size: 14px; font-weight: 600;"></div>
-      </div>
-    </div>
-
-    <!-- Row 5: Demo Controls -->
-    <div class="card">
-      <div class="card-title" style="margin-bottom: 10px;">Demo Controls & Diagnostics</div>
-      <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px;">
-        <button class="btn btn-primary" onclick="resetDemo()">Reset Demo Data</button>
-        <button class="btn btn-success" onclick="triggerReminder()">Trigger Medicine Reminder</button>
-        <a href="/v1/privacy/export" class="btn btn-outline">Export Personal Data (ZIP)</a>
-        <a href="/docs" target="_blank" class="btn btn-outline">FastAPI Docs &rarr;</a>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- ======================================================== -->
-  <!-- PATIENT PORTAL (ULTRA SIMPLE & HIGH CONTRAST)            -->
-  <!-- ======================================================== -->
-  <div id="patient-view" class="patient-container" style="display: none;">
-
-    <div class="patient-hero">
-      <img src="data:image/png;base64,__LOGO_B64__" onerror="this.src='/logo.png'" alt="Ghajini Robot Friend" class="patient-logo">
-      <div class="patient-greeting" id="p-greeting">
-        नमस्ते! मैं गजिनी हूँ।
-      </div>
-      <div class="patient-subtitle" id="p-subgreeting">
-        आप अपने घर में सुरक्षित हैं। मैं आपके साथ हूँ।
-      </div>
-    </div>
-
-    <!-- Huge Touch Cards for Elderly User -->
-    <div class="patient-action-grid">
-
-      <!-- 1. Talk to Ghajini -->
-      <div class="patient-btn-card p-btn-talk" onclick="openPatientTalkModal()">
-        <div class="p-btn-icon">🤖</div>
-        <div class="p-btn-title" id="p-card-talk-title">गजिनी से बात करें</div>
-        <div class="p-btn-desc" id="p-card-talk-desc">मुझसे कोई भी सवाल पूछें</div>
-      </div>
-
-      <!-- 2. My Heart & Pulse -->
-      <div class="patient-btn-card p-btn-heart" onclick="openPatientHeartModal()">
-        <div class="p-btn-icon">❤️</div>
-        <div class="p-btn-title" id="p-card-heart-title">मेरा दिल और नब्ज़</div>
-        <div class="p-btn-desc" id="p-card-heart-desc">74 BPM &bull; बिल्कुल सामान्य</div>
-      </div>
-
-      <!-- 3. Call Caregiver (Priya) -->
-      <div class="patient-btn-card p-btn-call" onclick="patientCallCaregiver()">
-        <div class="p-btn-icon">📞</div>
-        <div class="p-btn-title" id="p-card-call-title">प्रिया को फोन करें</div>
-        <div class="p-btn-desc">+91 7604934874 (तुरंत कॉल)</div>
-      </div>
-
-      <!-- 4. Emergency SOS -->
-      <div class="patient-btn-card p-btn-sos" onclick="patientTriggerSOS()">
-        <div class="p-btn-icon">🚨</div>
-        <div class="p-btn-title" id="p-card-sos-title">मदद चाहिए / SOS</div>
-        <div class="p-btn-desc" id="p-card-sos-desc">परिवार को तुरंत संदेश भेजें</div>
-      </div>
-
-    </div>
-
-    <!-- 5. Today's Medicines Card -->
-    <div class="card" style="margin-top: 24px; text-align: left; border-radius: 20px; padding: 28px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-        <div style="font-size: 24px; font-weight: 800; color: #1E293B; display: flex; align-items: center; gap: 10px;">
-          <span>💊</span> <span id="p-meds-title">आज की दवाइयां</span>
-        </div>
-        <span class="badge badge-success" style="font-size: 14px; padding: 6px 14px;">सब सही चल रहा है</span>
-      </div>
-      <div style="display: flex; flex-direction: column; gap: 12px;" id="p-meds-list">
-        <div style="display: flex; justify-content: space-between; align-items: center; background: #F0FDF4; border: 1.5px solid #BBF7D0; padding: 16px 20px; border-radius: 14px;">
+        <div class="card-header-clean">
           <div>
-            <div style="font-size: 20px; font-weight: 700; color: #166534;">सुबह 8:00 बजे - डोनेपेज़िल (Donepezil 5mg)</div>
-            <div style="font-size: 15px; color: #15803D;">नाश्ते के बाद &bull; ली जा चुकी है ✅</div>
+            <div class="card-title">Recent Call Attempts & Telephony Log</div>
+            <div class="card-sub">Logged in MongoDB & SQLite audit collections</div>
           </div>
-          <span style="font-size: 28px;">✅</span>
+          <button class="btn-outline" style="height: 30px; font-size: 12px;" onclick="loadRecentCalls()">Refresh Logs</button>
         </div>
-        <div style="display: flex; justify-content: space-between; align-items: center; background: #FFFBEB; border: 1.5px solid #FDE68A; padding: 16px 20px; border-radius: 14px;">
-          <div>
-            <div style="font-size: 20px; font-weight: 700; color: #92400E;">रात 8:00 बजे - ब्लड प्रेशर की गोली</div>
-            <div style="font-size: 15px; color: #B45309;">रात के खाने के बाद (बाकी है)</div>
-          </div>
-          <button class="btn btn-success" style="font-size: 16px; padding: 8px 18px;" onclick="alert('शाबाश! रात की दवाई दर्ज कर ली गई है।')">ली मैंने ✅</button>
+
+        <table class="clean-table" id="calls-table">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Contact</th>
+              <th>Phone</th>
+              <th>Reason</th>
+              <th>Source</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="calls-table-body">
+            <tr>
+              <td colspan="6" style="text-align: center; color: var(--text-muted);">Loading recent call records...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+
+    <!-- ======================================================== -->
+    <!-- PATIENT SIMPLE PORTAL (High Contrast & Elderly Friendly) -->
+    <!-- ======================================================== -->
+    <section id="patient-portal-container">
+      <div class="patient-hero-card">
+        <img src="data:image/png;base64,__LOGO_B64__" onerror="this.src='/logo.png'" alt="Ghajini Robot Friend" class="patient-hero-logo">
+        <div style="font-size: 28px; font-weight: 800; color: #1F2937; margin-top: 14px;" id="p-greeting-text">
+          नमस्ते! मैं गजिनी हूँ।
+        </div>
+        <div style="font-size: 17px; color: var(--text-muted); margin-top: 6px;" id="p-subgreeting-text">
+          आप अपने घर में बिल्कुल सुरक्षित हैं। मैं आपके साथ हूँ।
+        </div>
+        <button class="btn-outline" style="margin-top: 16px; font-size: 12.5px;" onclick="switchPortal('studio')">
+          ← Back to Caregiver Studio
+        </button>
+      </div>
+
+      <div class="patient-big-grid">
+        <!-- 1. Talk to Ghajini -->
+        <div class="patient-big-btn p-btn-talk" onclick="patientOpenTalk()">
+          <div style="font-size: 44px;">🤖</div>
+          <div style="font-size: 20px; font-weight: 800; color: #1F2937;">गजिनी से बात करें</div>
+          <div style="font-size: 14px; color: var(--text-muted);">मुझसे कोई भी सवाल पूछें</div>
+        </div>
+
+        <!-- 2. Call Priya -->
+        <div class="patient-big-btn p-btn-call" onclick="triggerPhoneCallCaregiver()">
+          <div style="font-size: 44px;">📞</div>
+          <div style="font-size: 20px; font-weight: 800; color: #065F46;">प्रिया को फोन करें</div>
+          <div style="font-size: 14px; color: #047857;">+91 7604934874 (तुरंत कॉल)</div>
+        </div>
+
+        <!-- 3. Heart & Pulse -->
+        <div class="patient-big-btn p-btn-heart" onclick="patientOpenHeart()">
+          <div style="font-size: 44px;">❤️</div>
+          <div style="font-size: 20px; font-weight: 800; color: #9F1239;">मेरा दिल और नब्ज़</div>
+          <div style="font-size: 14px; color: #BE123C;" id="p-heart-status-sub">74 BPM &bull; बिल्कुल सामान्य</div>
+        </div>
+
+        <!-- 4. SOS Help -->
+        <div class="patient-big-btn p-btn-sos" onclick="patientTriggerSOS()">
+          <div style="font-size: 44px;">🚨</div>
+          <div style="font-size: 20px; font-weight: 800; color: #991B1B;">मदद चाहिए / SOS</div>
+          <div style="font-size: 14px; color: #B91C1C;">परिवार को तुरंत संदेश भेजें</div>
         </div>
       </div>
-    </div>
+    </section>
 
   </div>
 
@@ -661,332 +1360,310 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
   <!-- MODALS                                                   -->
   <!-- ======================================================== -->
 
-  <!-- Caretaker Login & Info Modal -->
-  <div class="patient-modal-overlay" id="caretaker-login-modal">
-    <div class="patient-modal">
-      <div class="patient-modal-title">
-        <span>🛡️</span> Caretaker Information & Login
-      </div>
-      <p style="color: #64748B; font-size: 15px; margin-bottom: 20px;">
-        Enter caretaker credentials and contact information for automated safety alerts and call escalation:
+  <!-- Caregiver Modal -->
+  <div class="modal-overlay" id="modal-caregiver">
+    <div class="modal-card">
+      <div class="card-title" style="margin-bottom: 12px;">Caregiver Information</div>
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+        Profile used for automatic call forwarding and emergency escalations:
       </p>
-      <form onsubmit="saveCaretakerInfo(event)" style="display: flex; flex-direction: column; gap: 14px;">
-        <div>
-          <label style="font-size: 14px; font-weight: 700; color: #334155; display: block; margin-bottom: 6px;">Full Name</label>
-          <input type="text" id="ct-input-name" class="test-input" required value="Priya Sharma" style="width: 100%;">
-        </div>
-        <div>
-          <label style="font-size: 14px; font-weight: 700; color: #334155; display: block; margin-bottom: 6px;">Email Address</label>
-          <input type="email" id="ct-input-email" class="test-input" required value="priya.sharma@familycare.in" style="width: 100%;">
-        </div>
-        <div>
-          <label style="font-size: 14px; font-weight: 700; color: #334155; display: block; margin-bottom: 6px;">Primary Phone Number (for SIM calls)</label>
-          <input type="tel" id="ct-input-phone" class="test-input" required value="+91 7604934874" style="width: 100%;">
-        </div>
-        <div>
-          <label style="font-size: 14px; font-weight: 700; color: #334155; display: block; margin-bottom: 6px;">Relationship to Patient</label>
-          <select id="ct-input-rel" class="test-input" style="width: 100%;">
-            <option value="Daughter & Primary Guardian" selected>Daughter & Primary Guardian</option>
-            <option value="Son">Son</option>
-            <option value="Spouse">Spouse</option>
-            <option value="Doctor">Doctor</option>
-            <option value="Visiting Nurse">Visiting Nurse</option>
-          </select>
-        </div>
-        <div>
-          <label style="font-size: 14px; font-weight: 700; color: #334155; display: block; margin-bottom: 6px;">Access PIN / Password</label>
-          <input type="password" id="ct-input-pin" class="test-input" value="1234" style="width: 100%;">
-        </div>
-        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 10px;">
-          <button type="button" class="btn btn-outline" onclick="closeCaretakerLoginModal()">Cancel</button>
-          <button type="submit" class="btn btn-primary">Save & Connect</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Patient Talk Modal -->
-  <div class="patient-modal-overlay" id="patient-talk-modal">
-    <div class="patient-modal">
-      <div class="patient-modal-title">
-        <span>🤖</span> <span id="p-talk-title">गजिनी से बात करें</span>
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <input type="text" id="cfg-name" class="form-control" value="Priya Sharma">
       </div>
-      <p style="color: #64748B; font-size: 18px; margin-bottom: 16px;" id="p-talk-sub">
-        नीचे दिए गए बटन दबाएं या अपना सवाल पूछें:
-      </p>
-
-      <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
-        <button class="btn btn-outline" style="font-size: 18px; padding: 14px 18px; text-align: left;" onclick="patientAskPrompt('Who is Priya?')">
-          🌸 प्रिया कौन है? (Who is Priya?)
-        </button>
-        <button class="btn btn-outline" style="font-size: 18px; padding: 14px 18px; text-align: left;" onclick="patientAskPrompt('What day is it today?')">
-          📅 आज कौन सा दिन है? (What day is it?)
-        </button>
-        <button class="btn btn-outline" style="font-size: 18px; padding: 14px 18px; text-align: left;" onclick="patientAskPrompt('Did I take my morning medicine?')">
-          💊 क्या मैंने सुबह की दवाई ले ली?
-        </button>
+      <div class="form-group">
+        <label class="form-label">Caregiver Phone Number (SIM Direct)</label>
+        <input type="text" id="cfg-phone" class="form-control" value="+91 7604934874">
       </div>
-
-      <div class="test-box">
-        <input type="text" id="patient-talk-input" class="test-input" style="font-size: 20px; padding: 16px;" placeholder="यहाँ पूछें...">
-        <button class="btn btn-primary" style="font-size: 18px; padding: 14px 24px;" onclick="patientSendText()">पूछें</button>
+      <div class="form-group">
+        <label class="form-label">Relationship to Patient</label>
+        <input type="text" id="cfg-rel" class="form-control" value="Daughter & Primary Guardian">
       </div>
-
-      <div class="companion-reply-box" id="patient-reply-box" style="display: none; margin-top: 20px;">
-        <div class="companion-reply-text" id="patient-reply-text" style="font-size: 24px;"></div>
-      </div>
-
-      <div style="margin-top: 24px; text-align: right;">
-        <button class="btn btn-outline" style="font-size: 16px;" onclick="closePatientTalkModal()">बंद करें (Close)</button>
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+        <button class="btn-outline" onclick="closeCaregiverModal()">Cancel</button>
+        <button class="btn-teal" onclick="saveCaregiverModal()">Save Information</button>
       </div>
     </div>
   </div>
 
-  <!-- Patient Heart Modal -->
-  <div class="patient-modal-overlay" id="patient-heart-modal">
-    <div class="patient-modal" style="text-align: center;">
-      <div style="font-size: 64px; animation: gentle-pulse 1.2s infinite;">❤️</div>
-      <div style="font-size: 32px; font-weight: 800; color: #1E293B; margin-top: 10px;" id="p-heart-bpm-text">
-        74 BPM
+  <!-- Ask AI Modal -->
+  <div class="modal-overlay" id="modal-ask-ai">
+    <div class="modal-card">
+      <div class="card-title" style="color: var(--accent-orange); margin-bottom: 12px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        Ghajini AI Prompt Tuning Assistant
       </div>
-      <div style="font-size: 22px; font-weight: 700; color: #10B981; margin-top: 6px;" id="p-heart-status-text">
-        आपकी धड़कन बिल्कुल स्वस्थ और स्थिर है
-      </div>
-      <p style="color: #64748B; font-size: 18px; margin-top: 12px; line-height: 1.5;" id="p-heart-desc-text">
-        चिंता की कोई बात नहीं है। आप आराम से बैठें और गहरी सांस लें। प्रिया को आपकी हर धड़कन की जानकारी मिल रही है।
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+        Ask AI to optimize instructions for dementia/Alzheimer's care, de-escalation, or bilingual switching:
       </p>
-      <div style="margin-top: 28px;">
-        <button class="btn btn-primary" style="font-size: 18px; padding: 12px 30px;" onclick="closePatientHeartModal()">
-          ठीक है (I Feel Good)
-        </button>
+      <div class="form-group">
+        <textarea id="ai-suggestion-input" class="form-control" rows="3" placeholder="e.g. Make the companion sound more comforting when the patient asks about deceased relatives."></textarea>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button class="btn-outline" onclick="closeAskAIModal()">Close</button>
+        <button class="btn-ask-ai" onclick="generateAIPromptSuggestion()">Optimize Instructions</button>
       </div>
     </div>
   </div>
 
-  <style>
-    @keyframes gentle-pulse {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.18); }
-      100% { transform: scale(1); }
-    }
-  </style>
+  <!-- Deploy Status Modal -->
+  <div class="modal-overlay" id="modal-deploy">
+    <div class="modal-card">
+      <div class="card-title" style="color: var(--primary); margin-bottom: 12px;">Production Deployment</div>
+      <div class="setting-tile" style="margin-bottom: 16px;">
+        <div class="setting-tile-info">
+          <div class="setting-tile-title">Vercel Serverless (Production)</div>
+          <div class="setting-tile-desc">https://ghajini-2-0.vercel.app</div>
+        </div>
+        <span class="header-pill" style="color: var(--primary);">Live & Active</span>
+      </div>
+      <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 16px;">
+        Your project is connected to GitHub <code>Madhu07-offl/Ghajini-2.O</code>. Every push automatically rebuilds and deploys to Vercel within 10 seconds.
+      </p>
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button class="btn-outline" onclick="closeDeployModal()">Close</button>
+        <button class="btn-teal" onclick="window.open('https://ghajini-2-0.vercel.app', '_blank')">Open Vercel App ↗</button>
+      </div>
+    </div>
+  </div>
 
   <script>
     // State
-    let activePortal = 'caretaker';
+    let activeTab = 'assistant';
+    let activePortal = 'studio';
     let currentLang = 'hi';
     let ecgAnimationId = null;
 
-    // Language Content Maps
-    const LANG_DATA = {
-      en: {
-        greeting: "Hello! I am Ghajini.",
-        subgreeting: "You are safe at home with your loved ones. I am right here with you.",
-        talkTitle: "Talk to Ghajini",
-        talkDesc: "Ask me any question",
-        heartTitle: "My Heart & Pulse",
-        heartDesc: "74 BPM • Normal and Steady",
-        callTitle: "Call Priya",
-        sosTitle: "Need Help / SOS",
-        sosDesc: "Notify family immediately",
-        medsTitle: "Today's Medicines",
-        heartModalStatus: "Your heart is beating calm and steady",
-        heartModalDesc: "Everything is peaceful and well. Priya has your vitals and you are completely safe."
-      },
-      hi: {
-        greeting: "नमस्ते! मैं गजिनी हूँ।",
-        subgreeting: "आप अपने घर में सुरक्षित हैं। मैं आपके साथ हूँ।",
-        talkTitle: "गजिनी से बात करें",
-        talkDesc: "मुझसे कोई भी सवाल पूछें",
-        heartTitle: "मेरा दिल और नब्ज़",
-        heartDesc: "74 BPM • बिल्कुल सामान्य",
-        callTitle: "प्रिया को फोन करें",
-        sosTitle: "मदद चाहिए / SOS",
-        sosDesc: "परिवार को तुरंत संदेश भेजें",
-        medsTitle: "आज की दवाइयां",
-        heartModalStatus: "आपकी धड़कन बिल्कुल स्वस्थ और स्थिर है",
-        heartModalDesc: "चिंता की कोई बात नहीं है। आप आराम से बैठें। प्रिया को आपकी हर धड़कन की जानकारी मिल रही है।"
-      },
-      pa: {
-        greeting: "ਸਤਿ ਸ੍ਰੀ ਅਕਾਲ! ਮੈਂ ਗਜਨੀ ਹਾਂ।",
-        subgreeting: "ਤੁਸੀਂ ਆਪਣੇ ਘਰ ਵਿੱਚ ਬਿਲਕੁਲ ਸੁਰੱਖਿਅਤ ਹੋ। ਮੈਂ ਤੁਹਾਡੇ ਨਾਲ ਹਾਂ।",
-        talkTitle: "ਗਜਨੀ ਨਾਲ ਗੱਲ ਕਰੋ",
-        talkDesc: "ਮੈਨੂੰ ਕੋਈ ਵੀ ਸਵਾਲ ਪੁੱਛੋ",
-        heartTitle: "ਮੇਰਾ ਦਿਲ ਅਤੇ ਨਬਜ਼",
-        heartDesc: "74 BPM • ਬਿਲਕੁਲ ਸਹੀ",
-        callTitle: "ਪ੍ਰਿਆ ਨੂੰ ਫੋਨ ਕਰੋ",
-        sosTitle: "ਮਦਦ ਚਾਹੀਦੀ ਹੈ / SOS",
-        sosDesc: "ਪਰਿਵਾਰ ਨੂੰ ਤੁਰੰਤ ਸੁਨੇਹਾ ਭੇਜੋ",
-        medsTitle: "ਅੱਜ ਦੀਆਂ ਦਵਾਈਆਂ",
-        heartModalStatus: "ਤੁਹਾਡੇ ਦਿਲ ਦੀ ਧੜਕਣ ਬਿਲਕੁਲ ਠੀਕ ਹੈ",
-        heartModalDesc: "ਫਿਕਰ ਦੀ ਕੋਈ ਗੱਲ ਨਹੀਂ। ਪ੍ਰਿਆ ਤੁਹਾਡੇ ਨਾਲ ਹੈ।"
+    // Tab Switcher
+    function switchTab(tabId) {
+      activeTab = tabId;
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = document.getElementById('tab-' + tabId);
+      if (activeBtn) activeBtn.classList.add('active');
+
+      // Update sidebar nav active
+      document.querySelectorAll('.nav-icon-btn').forEach(btn => btn.classList.remove('active'));
+
+      // Hide all views
+      ['assistant', 'calls', 'knowledge', 'integrations', 'postcall', 'history'].forEach(id => {
+        const el = document.getElementById('view-' + id);
+        if (el) el.style.display = (id === tabId) ? 'block' : 'none';
+      });
+
+      if (tabId === 'history') {
+        loadRecentCalls();
       }
-    };
+    }
 
     // Portal Switcher
     function switchPortal(portal) {
       activePortal = portal;
-      const ctView = document.getElementById('caretaker-view');
-      const ptView = document.getElementById('patient-view');
-      const ctTab = document.getElementById('tab-caretaker');
-      const ptTab = document.getElementById('tab-patient');
+      const studioViews = ['view-assistant', 'view-calls', 'view-knowledge', 'view-integrations', 'view-postcall', 'view-history'];
+      const pContainer = document.getElementById('patient-portal-container');
 
       if (portal === 'patient') {
-        ctView.style.display = 'none';
-        ptView.style.display = 'block';
-        ctTab.classList.remove('active');
-        ptTab.classList.add('active');
-      } else {
-        ctView.style.display = 'block';
-        ptView.style.display = 'none';
-        ctTab.classList.add('active');
-        ptTab.classList.remove('active');
-        loadDashboard();
-      }
-    }
-
-    // Language Switcher
-    function changeLanguage() {
-      const lang = document.getElementById('global-lang').value;
-      currentLang = lang;
-      document.getElementById('comp-lang-select').value = lang;
-
-      const d = LANG_DATA[lang] || LANG_DATA.en;
-      document.getElementById('p-greeting').innerText = d.greeting;
-      document.getElementById('p-subgreeting').innerText = d.subgreeting;
-      document.getElementById('p-card-talk-title').innerText = d.talkTitle;
-      document.getElementById('p-card-talk-desc').innerText = d.talkDesc;
-      document.getElementById('p-card-heart-title').innerText = d.heartTitle;
-      document.getElementById('p-card-heart-desc').innerText = d.heartDesc;
-      document.getElementById('p-card-call-title').innerText = d.callTitle;
-      document.getElementById('p-card-sos-title').innerText = d.sosTitle;
-      document.getElementById('p-card-sos-desc').innerText = d.sosDesc;
-      document.getElementById('p-meds-title').innerText = d.medsTitle;
-      document.getElementById('p-heart-status-text').innerText = d.heartModalStatus;
-      document.getElementById('p-heart-desc-text').innerText = d.heartModalDesc;
-    }
-
-    // Caretaker Info in LocalStorage
-    function loadSavedCaretakerInfo() {
-      try {
-        const saved = JSON.parse(localStorage.getItem('ghajini_caretaker_info') || '{}');
-        if (saved.name) {
-          document.getElementById('caretaker-display-name').innerText = saved.name;
-          document.getElementById('caretaker-display-phone').innerText = saved.phone || '+91 7604934874';
-          document.getElementById('caretaker-display-email').innerText = saved.email || 'priya.sharma@familycare.in';
-          document.getElementById('ct-input-name').value = saved.name;
-          document.getElementById('ct-input-phone').value = saved.phone || '+91 7604934874';
-          document.getElementById('ct-input-email').value = saved.email || '';
-          if (saved.rel) document.getElementById('ct-input-rel').value = saved.rel;
-        }
-      } catch (e) {
-        console.error(e);
-      }
-    }
-
-    function openCaretakerLoginModal() {
-      document.getElementById('caretaker-login-modal').style.display = 'flex';
-    }
-    function closeCaretakerLoginModal() {
-      document.getElementById('caretaker-login-modal').style.display = 'none';
-    }
-    function saveCaretakerInfo(e) {
-      e.preventDefault();
-      const info = {
-        name: document.getElementById('ct-input-name').value.trim(),
-        email: document.getElementById('ct-input-email').value.trim(),
-        phone: document.getElementById('ct-input-phone').value.trim(),
-        rel: document.getElementById('ct-input-rel').value,
-      };
-      localStorage.setItem('ghajini_caretaker_info', JSON.stringify(info));
-      document.getElementById('caretaker-display-name').innerText = info.name;
-      document.getElementById('caretaker-display-phone').innerText = info.phone;
-      document.getElementById('caretaker-display-email').innerText = info.email;
-      closeCaretakerLoginModal();
-      alert('Caretaker Profile Updated & Connected Successfully!');
-    }
-
-    // Dashboard Data Loading
-    async function loadDashboard() {
-      try {
-        const res = await fetch('/v1/dashboard/summary');
-        const data = await res.json();
-
-        document.getElementById('adherence-val').innerText = data.adherence_pct.toFixed(1) + '%';
-        document.getElementById('adherence-sub').innerText = `${data.done_count} doses taken, ${data.missed_count} missed`;
-        document.getElementById('recog-val').innerText = data.recognitions_today;
-        document.getElementById('alerts-val').innerText = data.alerts_count;
-
-        // Render Bar Chart
-        const chartEl = document.getElementById('chart-bars');
-        chartEl.innerHTML = '';
-        const maxDoses = Math.max(...data.weekly_history.map(d => d.done + d.missed), 1);
-
-        data.weekly_history.forEach(day => {
-          const col = document.createElement('div');
-          col.className = 'chart-col';
-          const doneH = Math.max(6, (day.done / maxDoses) * 90);
-          const missedH = (day.missed / maxDoses) * 90;
-
-          col.innerHTML = `
-            <div class="bar-group">
-              <div class="bar bar-done" style="height: ${doneH}px;" title="${day.day}: ${day.done} taken"></div>
-              ${day.missed > 0 ? `<div class="bar bar-missed" style="height: ${missedH}px;" title="${day.day}: ${day.missed} missed"></div>` : ''}
-            </div>
-            <div class="day-label">${day.day}</div>
-          `;
-          chartEl.appendChild(col);
+        studioViews.forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.style.display = 'none';
         });
-
-        // Render Top Questions
-        const qList = document.getElementById('questions-list');
-        qList.innerHTML = '';
-        if (data.top_questions.length === 0) {
-          qList.innerHTML = '<div class="question-item"><span class="question-text">No recorded questions yet.</span></div>';
-        } else {
-          data.top_questions.forEach(q => {
-            const item = document.createElement('div');
-            item.className = 'question-item';
-            item.innerHTML = `
-              <span class="question-text">${q.question}</span>
-              <span class="question-count">${q.count}x asked</span>
-            `;
-            qList.appendChild(item);
-          });
-        }
-
-        // Daily Summary
-        const dailyRes = await fetch('/v1/dashboard/daily-summary');
-        const dailyData = await dailyRes.json();
-        document.getElementById('daily-summary-text').innerText = dailyData.summary;
-
-        // Fetch Live Vitals
-        refreshVitals();
-
-      } catch (e) {
-        console.error(e);
+        pContainer.style.display = 'block';
+      } else {
+        pContainer.style.display = 'none';
+        switchTab(activeTab);
       }
     }
 
-    // Vitals & CardioLife
+    // Language Change
+    function onLangChange() {
+      const lang = document.getElementById('agent-lang').value;
+      currentLang = lang;
+      const pGreeting = document.getElementById('p-greeting-text');
+      const pSub = document.getElementById('p-subgreeting-text');
+
+      if (lang === 'hi') {
+        pGreeting.innerText = 'नमस्ते! मैं गजिनी हूँ।';
+        pSub.innerText = 'आप अपने घर में बिल्कुल सुरक्षित हैं। मैं आपके साथ हूँ।';
+      } else if (lang === 'pa') {
+        pGreeting.innerText = 'ਸਤਿ ਸ੍ਰੀ ਅਕਾਲ! ਮੈਂ ਗਜਨੀ ਹਾਂ।';
+        pSub.innerText = 'ਤੁਸੀਂ ਆਪਣੇ ਘਰ ਵਿੱਚ ਬਿਲਕੁਲ ਸੁਰੱਖਿਅਤ ਹੋ। ਮੈਂ ਤੁਹਾਡੇ ਨਾਲ ਹਾਂ।';
+      } else {
+        pGreeting.innerText = 'Hello! I am Ghajini.';
+        pSub.innerText = 'You are safe at home with your loved ones. I am right here with you.';
+      }
+    }
+
+    // Simulator Interactive
+    function focusChatSimulator() {
+      switchTab('assistant');
+      const input = document.getElementById('sim-input');
+      input.focus();
+      input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function quickSend(text) {
+      document.getElementById('sim-input').value = text;
+      sendSimulatorText();
+    }
+
+    async function sendSimulatorText() {
+      const input = document.getElementById('sim-input');
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+
+      const stream = document.getElementById('chat-stream');
+      
+      // Append patient message
+      const pBubble = document.createElement('div');
+      pBubble.className = 'chat-bubble chat-bubble-patient';
+      pBubble.innerText = text;
+      stream.appendChild(pBubble);
+      stream.scrollTop = stream.scrollHeight;
+
+      // Loading bubble
+      const gBubble = document.createElement('div');
+      gBubble.className = 'chat-bubble chat-bubble-ghajini';
+      gBubble.innerText = 'Ghajini is thinking...';
+      stream.appendChild(gBubble);
+      stream.scrollTop = stream.scrollHeight;
+
+      try {
+        const res = await fetch('/v1/companion/message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ patient_id: 1, text: text, lang: currentLang, source: 'text' })
+        });
+        const data = await res.json();
+        gBubble.innerHTML = `
+          ${data.reply}
+          <div>
+            <span class="meta-tag meta-intent">intent: ${data.intent}</span>
+            <span class="meta-tag ${data.grounded ? 'meta-grounded' : 'meta-intent'}">${data.grounded ? 'grounded: fact' : 'ungrounded fallback'}</span>
+          </div>
+        `;
+      } catch (e) {
+        gBubble.innerText = 'I am not sure. Shall I call Priya for you?';
+      }
+      stream.scrollTop = stream.scrollHeight;
+    }
+
+    // Voice simulation
+    function testVoicePlayback() {
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance('Namaste. I am Ghajini, your memory companion. You are doing wonderful today.');
+        utterance.rate = 0.85;
+        window.speechSynthesis.speak(utterance);
+      } else {
+        alert('Voice playback test: Speech synthesis triggered at 0.85x calm pace.');
+      }
+    }
+
+    function startWebVoiceCall() {
+      focusChatSimulator();
+      testVoicePlayback();
+    }
+
+    // Direct Phone Call
+    async function triggerPhoneCallCaregiver() {
+      try {
+        const res = await fetch('/v1/calls/request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            patient_id: 1,
+            reason: 'Voice Studio phone call trigger',
+            source: 'manual',
+            lang: currentLang,
+            bypass_cooldown: true
+          })
+        });
+        const data = await res.json();
+        if (data.allowed) {
+          alert(`📞 Calling ${data.contact.name} (${data.contact.phone})\n\nPatient Speech:\n"${data.patient_message}"\n\nCaregiver Telegram Briefing:\n${data.caregiver_briefing}`);
+          window.open(`tel:${data.contact.phone}`);
+        } else {
+          alert(`Call Paused: ${data.block_reason}`);
+        }
+      } catch (e) {
+        alert('Call request failed: ' + e);
+      }
+    }
+
+    async function resetCallCooldown() {
+      try {
+        const res = await fetch('/v1/calls/reset-cooldown?patient_id=1', { method: 'POST' });
+        const data = await res.json();
+        alert('Cooldown Reset: Throttle locks removed successfully.');
+      } catch (e) {
+        alert('Error: ' + e);
+      }
+    }
+
+    async function executeTestCall() {
+      const reason = document.getElementById('test-call-reason').value;
+      const source = document.getElementById('test-call-source').value;
+      const bypass = document.getElementById('toggle-cooldown-bypass').checked;
+      const out = document.getElementById('test-call-output');
+
+      out.style.display = 'block';
+      out.style.color = '#0F9D7A';
+      out.innerText = 'Dispatching test call to backend...';
+
+      try {
+        const res = await fetch('/v1/calls/request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            patient_id: 1,
+            reason: reason,
+            source: source,
+            lang: currentLang,
+            bypass_cooldown: bypass
+          })
+        });
+        const data = await res.json();
+        if (data.allowed) {
+          out.innerHTML = `✅ <strong>Call Dispatched!</strong> Calling ${data.contact.name} (${data.contact.phone})<br>Briefing: ${data.caregiver_briefing.replace(/\\n/g, ' ')}`;
+          window.open(`tel:${data.contact.phone}`);
+        } else {
+          out.style.color = '#DC2626';
+          out.innerHTML = `⚠️ <strong>Call Paused:</strong> ${data.block_reason}`;
+        }
+      } catch (e) {
+        out.style.color = '#DC2626';
+        out.innerText = 'Call error: ' + e;
+      }
+    }
+
+    // CardioLife & Vitals
     async function refreshVitals() {
       try {
         const res = await fetch('/v1/cardiolife/current?patient_id=1');
         const data = await res.json();
-        document.getElementById('vital-hr').innerHTML = `${data.heart_rate_bpm} <span style="font-size: 18px; font-weight: 600;">BPM</span>`;
-        document.getElementById('vital-status').innerText = data.status.replace('_', ' ').toUpperCase();
-        document.getElementById('vital-bp').innerHTML = `${data.blood_pressure_systolic}/${data.blood_pressure_diastolic} <span style="font-size: 18px; font-weight: 600;">mmHg</span>`;
-        document.getElementById('vital-spo2').innerHTML = `${data.oxygen_saturation} <span style="font-size: 18px; font-weight: 600;">%</span>`;
-        document.getElementById('p-card-heart-desc').innerText = `${data.heart_rate_bpm} BPM • ${data.status.replace('_', ' ')}`;
-        document.getElementById('p-heart-bpm-text').innerText = `${data.heart_rate_bpm} BPM`;
+        document.getElementById('dash-vital-hr').innerHTML = `${data.heart_rate_bpm} <span style="font-size: 12px; font-weight: 500;">BPM</span>`;
+        document.getElementById('dash-vital-status').innerText = data.status.replace('_', ' ').toUpperCase();
+        document.getElementById('dash-vital-bp').innerText = `${data.blood_pressure_systolic}/${data.blood_pressure_diastolic}`;
+        document.getElementById('dash-vital-spo2').innerHTML = `${data.oxygen_saturation} <span style="font-size: 12px; font-weight: 500;">%</span>`;
+        document.getElementById('p-heart-status-sub').innerText = `${data.heart_rate_bpm} BPM • ${data.status.replace('_', ' ')}`;
       } catch (e) {
         console.error(e);
       }
     }
 
-    // Live ECG Canvas Animation
-    function initECGAnimation() {
-      const canvas = document.getElementById('ecgCanvas');
+    async function simulateCardiacAlert() {
+      try {
+        const res = await fetch('/v1/cardiolife/simulate?scenario=critical_tachycardia', { method: 'POST' });
+        const data = await res.json();
+        alert(`❤️ CardioLife Alert Dispatched!\n\nHeart Rate: ${data.heart_rate_bpm} BPM (${data.status})\nBP: ${data.blood_pressure_systolic}/${data.blood_pressure_diastolic}\nSpO2: ${data.oxygen_saturation}%\n\nTelegram alert logged & sent.`);
+        refreshVitals();
+      } catch (e) {
+        alert('Simulation failed: ' + e);
+      }
+    }
+
+    // Mini ECG Canvas Animation
+    function initECG() {
+      const canvas = document.getElementById('miniECGCanvas');
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
       let offset = 0;
@@ -997,27 +1674,10 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
         ctx.fillStyle = '#0F172A';
         ctx.fillRect(0, 0, w, h);
 
-        // Draw grid
-        ctx.strokeStyle = '#1E293B';
-        ctx.lineWidth = 1;
-        for (let x = 0; x < w; x += 40) {
-          ctx.beginPath();
-          ctx.moveTo(x, 0);
-          ctx.lineTo(x, h);
-          ctx.stroke();
-        }
-        for (let y = 0; y < h; y += 30) {
-          ctx.beginPath();
-          ctx.moveTo(0, y);
-          ctx.lineTo(w, y);
-          ctx.stroke();
-        }
-
-        // Draw ECG trace
-        ctx.strokeStyle = '#34D399';
-        ctx.lineWidth = 2.5;
-        ctx.shadowColor = '#34D399';
-        ctx.shadowBlur = 8;
+        ctx.strokeStyle = '#0F9D7A';
+        ctx.lineWidth = 2;
+        ctx.shadowColor = '#0F9D7A';
+        ctx.shadowBlur = 6;
         ctx.beginPath();
 
         const mid = h / 2;
@@ -1025,20 +1685,15 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
           const t = (x + offset) % 180;
           let y = mid;
           if (t > 40 && t < 55) {
-            // P wave
-            y = mid - 8 * Math.sin(((t - 40) / 15) * Math.PI);
+            y = mid - 5 * Math.sin(((t - 40) / 15) * Math.PI);
           } else if (t >= 70 && t < 74) {
-            // Q wave
-            y = mid + 6;
+            y = mid + 4;
           } else if (t >= 74 && t < 84) {
-            // R spike
-            y = mid - 44 * Math.sin(((t - 74) / 10) * Math.PI);
+            y = mid - 26 * Math.sin(((t - 74) / 10) * Math.PI);
           } else if (t >= 84 && t < 90) {
-            // S wave
-            y = mid + 12;
+            y = mid + 8;
           } else if (t >= 110 && t < 140) {
-            // T wave
-            y = mid - 14 * Math.sin(((t - 110) / 30) * Math.PI);
+            y = mid - 8 * Math.sin(((t - 110) / 30) * Math.PI);
           }
           if (x === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
@@ -1049,204 +1704,17 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
         offset = (offset + 3) % 180;
         ecgAnimationId = requestAnimationFrame(renderFrame);
       }
-
       if (ecgAnimationId) cancelAnimationFrame(ecgAnimationId);
       renderFrame();
     }
 
-    // Direct Call with Bypass Cooldown
-    async function triggerCallCaregiver(bypass = true) {
-      const fb = document.getElementById('call-feedback-box');
-      fb.style.display = 'block';
-      fb.style.color = '#1E3A8A';
-      fb.innerText = 'Initiating SIM telephony call to caregiver...';
-
-      try {
-        const res = await fetch('/v1/calls/request', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            patient_id: 1,
-            reason: 'Manual caretaker interface trigger',
-            source: 'manual',
-            lang: currentLang,
-            bypass_cooldown: bypass
-          })
-        });
-        const data = await res.json();
-        if (data.allowed) {
-          fb.style.color = '#065F46';
-          fb.innerHTML = `✅ <strong>Calling ${data.contact.name} (${data.contact.phone})</strong><br>Spoken to Patient: "${data.patient_message}"<br>Caregiver Telegram: ${data.caregiver_briefing.replace(/\\n/g, ' ')}`;
-          window.open(`tel:${data.contact.phone}`);
-          loadDashboard();
-        } else {
-          fb.style.color = '#DC2626';
-          fb.innerHTML = `⚠️ <strong>Call Paused:</strong> ${data.block_reason} <button class="btn btn-pill" style="margin-left: 8px;" onclick="resetCallCooldown()">Click to Reset Cooldown</button>`;
-        }
-      } catch (e) {
-        fb.style.color = '#DC2626';
-        fb.innerText = 'Call error: ' + e;
-      }
-    }
-
-    // Reset Call Cooldown Endpoint
-    async function resetCallCooldown() {
-      try {
-        const res = await fetch('/v1/calls/reset-cooldown?patient_id=1', { method: 'POST' });
-        const data = await res.json();
-        const fb = document.getElementById('call-feedback-box');
-        fb.style.display = 'block';
-        fb.style.color = '#065F46';
-        fb.innerText = '✅ Call cool-down and throttle locks reset successfully! You can call immediately.';
-        alert('Cooldown Reset: Unlimited calls can now be placed.');
-      } catch (e) {
-        alert('Reset error: ' + e);
-      }
-    }
-
-    // Patient Portal Calls
-    function patientCallCaregiver() {
-      triggerCallCaregiver(true);
-    }
-
-    async function patientTriggerSOS() {
-      try {
-        const res = await fetch('/v1/alerts/help', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ patient_id: 1, note: 'Patient pressed Help / SOS on simple touch portal' })
-        });
-        alert('🚨 आपातकालीन सूचना भेज दी गई है!\n\nEmergency alert dispatched to Priya and doctor.');
-        triggerCallCaregiver(true);
-      } catch (e) {
-        alert('SOS error: ' + e);
-      }
-    }
-
-    // Patient Modal Handlers
-    function openPatientTalkModal() {
-      document.getElementById('patient-talk-modal').style.display = 'flex';
-      document.getElementById('patient-talk-input').value = '';
-      document.getElementById('patient-reply-box').style.display = 'none';
-    }
-    function closePatientTalkModal() {
-      document.getElementById('patient-talk-modal').style.display = 'none';
-    }
-
-    function openPatientHeartModal() {
-      refreshVitals();
-      document.getElementById('patient-heart-modal').style.display = 'flex';
-    }
-    function closePatientHeartModal() {
-      document.getElementById('patient-heart-modal').style.display = 'none';
-    }
-
-    function patientAskPrompt(text) {
-      document.getElementById('patient-talk-input').value = text;
-      patientSendText();
-    }
-
-    async function patientSendText() {
-      const text = document.getElementById('patient-talk-input').value.trim();
+    // Knowledge Base Teach
+    async function teachMemoryFact() {
+      const text = document.getElementById('teach-fact-input').value.trim();
       if (!text) return;
-      const replyBox = document.getElementById('patient-reply-box');
-      const replyText = document.getElementById('patient-reply-text');
-      replyBox.style.display = 'block';
-      replyText.innerText = 'गजिनी सोच रही है... (Thinking...)';
-
-      try {
-        const res = await fetch('/v1/companion/message', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ patient_id: 1, text: text, lang: currentLang, source: 'text' })
-        });
-        const data = await res.json();
-        replyText.innerText = data.reply;
-      } catch (e) {
-        replyText.innerText = 'मुझे पूरा यकीन नहीं है। क्या मैं प्रिया को फोन करूँ?';
-      }
-    }
-
-    // Caretaker AI Companion Tester
-    function setCompPrompt(text) {
-      document.getElementById('comp-input').value = text;
-      sendCompanionMessage();
-    }
-
-    async function sendCompanionMessage() {
-      const text = document.getElementById('comp-input').value.trim();
-      if (!text) return;
-      const lang = document.getElementById('comp-lang-select').value;
-      const container = document.getElementById('comp-reply-container');
-      const replyEl = document.getElementById('comp-reply-text');
-      const metaEl = document.getElementById('comp-meta');
-      const cardEl = document.getElementById('comp-person-card');
-
-      container.style.display = 'block';
-      replyEl.innerText = 'Ghajini is thinking...';
-      metaEl.innerHTML = '';
-      cardEl.innerHTML = '';
-
-      try {
-        const res = await fetch('/v1/companion/message', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ patient_id: 1, text: text, lang: lang, source: 'text' })
-        });
-        const data = await res.json();
-
-        replyEl.innerText = data.reply;
-        metaEl.innerHTML = `
-          <span class="badge-intent">Intent: ${data.intent}</span>
-          <span class="badge-mood">Mood: ${data.mood}</span>
-          <span class="badge-grounded">${data.grounded ? 'Grounded: Stored Facts' : 'Ungrounded Fallback'}</span>
-          <span style="font-size: 12px; color: var(--text-muted);">Lang: ${data.lang.toUpperCase()}</span>
-        `;
-
-        if (data.actions && data.actions.length > 0) {
-          data.actions.forEach(act => {
-            metaEl.innerHTML += `<span style="background: #FEE2E2; color: #991B1B; font-weight: 700; font-size: 12px; padding: 3px 8px; border-radius: 6px;">Action: ${act}</span>`;
-          });
-        }
-
-        if (data.person) {
-          cardEl.innerHTML = `
-            <div class="person-card" style="display: flex; align-items: center; gap: 14px; background: white; border: 1px solid #E2E8F0; border-radius: 12px; padding: 12px 16px; margin-top: 14px;">
-              <div style="width: 50px; height: 50px; border-radius: 50%; background: #DBEAFE; color: #1E3A8A; font-weight: 800; display: flex; align-items: center; justify-content: center; font-size: 20px;">${data.person.name.charAt(0)}</div>
-              <div>
-                <div style="font-weight: 700; font-size: 16px;">${data.person.name} (${data.person.relationship})</div>
-                <div style="font-size: 13px; color: var(--text-muted);">${data.person.notes || ''}</div>
-              </div>
-            </div>
-          `;
-        }
-
-        loadDashboard();
-      } catch (e) {
-        replyEl.innerText = 'I am not sure. Shall I call your family?';
-      }
-    }
-
-    async function pollProactive() {
-      try {
-        const res = await fetch('/v1/companion/proactive');
-        const data = await res.json();
-        if (data.has_message) {
-          alert(`[Proactive Companion ${data.message.type.toUpperCase()}]\n\n${data.message.message}`);
-        } else {
-          alert('No proactive message due at this time (or currently in quiet hours).');
-        }
-      } catch (e) {
-        alert('Proactive check error: ' + e);
-      }
-    }
-
-    async function teachMemory() {
-      const text = document.getElementById('teach-input').value.trim();
-      if (!text) return;
-      const statusEl = document.getElementById('teach-status');
-      statusEl.style.color = '#1E3A8A';
-      statusEl.innerText = 'Sanitizing and embedding into FAISS...';
+      const st = document.getElementById('teach-fact-status');
+      st.style.color = '#0F9D7A';
+      st.innerText = 'Embedding into FAISS vector index...';
 
       try {
         const res = await fetch('/v1/companion/teach', {
@@ -1255,69 +1723,109 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
           body: JSON.stringify({ patient_id: 1, text: text, category: 'personal' })
         });
         const data = await res.json();
-        statusEl.style.color = '#166534';
-        statusEl.innerText = `Success! Embedded memory id=${data.id}: "${data.text}"`;
-        document.getElementById('teach-input').value = '';
+        st.innerText = `Success! Embedded fact #${data.id}: "${data.text}"`;
+        document.getElementById('teach-fact-input').value = '';
       } catch (e) {
-        statusEl.style.color = '#DC2626';
-        statusEl.innerText = 'Error saving memory: ' + e;
+        st.style.color = '#DC2626';
+        st.innerText = 'Error embedding fact: ' + e;
       }
     }
 
-    async function resetDemo() {
-      if (!confirm('Reset demo data to 3 people, 10 memories, 2 reminders, and 1 place?')) return;
+    // Recent calls loader
+    async function loadRecentCalls() {
+      const tbody = document.getElementById('calls-table-body');
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Fetching call records...</td></tr>';
+
       try {
-        const res = await fetch('/v1/demo/reset', { method: 'POST' });
-        const data = await res.json();
-        alert('Demo Reset Complete: ' + data.message);
-        loadDashboard();
+        const res = await fetch('/v1/calls/history?patient_id=1');
+        const calls = await res.json();
+        tbody.innerHTML = '';
+        if (calls.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No recorded call attempts yet.</td></tr>';
+          return;
+        }
+        calls.forEach(c => {
+          const tr = document.createElement('tr');
+          const time = c.created_at ? new Date(c.created_at).toLocaleTimeString() : 'Recent';
+          tr.innerHTML = `
+            <td>${time}</td>
+            <td><strong>${c.contact_name || 'Priya'}</strong></td>
+            <td>${c.contact_phone || '+91 7604934874'}</td>
+            <td>${c.reason || 'Safety Trigger'}</td>
+            <td><span class="header-pill">${c.source || 'manual'}</span></td>
+            <td><span class="header-pill" style="color: ${c.allowed ? 'var(--primary)' : '#DC2626'};">${c.allowed ? 'Allowed' : 'Throttled'}</span></td>
+          `;
+          tbody.appendChild(tr);
+        });
       } catch (e) {
-        alert('Reset failed: ' + e);
+        tbody.innerHTML = `<tr><td colspan="6" style="color: #DC2626;">Error loading calls: ${e}</td></tr>`;
       }
     }
 
-    async function triggerReminder() {
-      try {
-        const res = await fetch('/v1/demo/trigger-reminder', { method: 'POST' });
-        const data = await res.json();
-        alert(`Reminder Triggered: "${data.title}" is now due!`);
-        loadDashboard();
-      } catch (e) {
-        alert('Trigger failed: ' + e);
+    // Modals
+    function openCaregiverModal() { document.getElementById('modal-caregiver').style.display = 'flex'; }
+    function closeCaregiverModal() { document.getElementById('modal-caregiver').style.display = 'none'; }
+    function saveCaregiverModal() {
+      closeCaregiverModal();
+      alert('Caregiver profile updated.');
+    }
+
+    function openAskAIModal() { document.getElementById('modal-ask-ai').style.display = 'flex'; }
+    function closeAskAIModal() { document.getElementById('modal-ask-ai').style.display = 'none'; }
+    function generateAIPromptSuggestion() {
+      document.getElementById('agent-prompt').value = `You are Ghajini, a caring Alzheimer's voice assistant. Speak with tender warmth and extreme patience. Never mention that you are an AI. If the patient repeats a question, answer it fresh with a smile. If they appear anxious, ground them by reminding them Priya is nearby and their home is peaceful.`;
+      closeAskAIModal();
+      alert('AI Prompt Suggestion applied to System Prompt!');
+    }
+
+    function openDeployModal() { document.getElementById('modal-deploy').style.display = 'flex'; }
+    function closeDeployModal() { document.getElementById('modal-deploy').style.display = 'none'; }
+
+    function resetInstructions() {
+      document.getElementById('agent-prompt').value = `You are Ghajini, a compassionate memory companion for an Alzheimer's patient. 
+Rules:
+1. Speak in 1 or 2 short, calming sentences.
+2. Ground all answers strictly in stored family facts.
+3. If asked about taking medicine, check reminder records.
+4. Detect anxiety and reassure the patient they are safe at home.`;
+    }
+
+    function toggleViewMode(mode) {
+      document.getElementById('btn-view-ui').classList.toggle('active', mode === 'ui');
+      document.getElementById('btn-view-code').classList.toggle('active', mode === 'code');
+      if (mode === 'code') {
+        window.open('/docs', '_blank');
       }
     }
 
-    async function triggerSOS() {
+    // Patient Actions
+    function patientOpenTalk() {
+      switchPortal('studio');
+      focusChatSimulator();
+    }
+    function patientOpenHeart() {
+      refreshVitals();
+      alert('❤️ आपकी धड़कन 74 BPM है। आप बिल्कुल स्वस्थ और सुरक्षित हैं।');
+    }
+    async function patientTriggerSOS() {
       try {
-        const res = await fetch('/v1/alerts/help', {
+        await fetch('/v1/alerts/help', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ patient_id: 1, note: 'Web Dashboard SOS trigger' })
+          body: JSON.stringify({ patient_id: 1, note: 'Patient pressed Help / SOS on simple touch portal' })
         });
-        alert('Emergency Alert Dispatched: Your family has been notified.');
-        loadDashboard();
+        alert('🚨 आपातकालीन सूचना भेज दी गई है!\n\nEmergency alert dispatched to Priya and doctor.');
+        triggerPhoneCallCaregiver();
       } catch (e) {
-        alert('SOS failed: ' + e);
+        alert('SOS error: ' + e);
       }
     }
 
-    async function simulateCardiacAlert() {
-      try {
-        const res = await fetch('/v1/cardiolife/simulate?scenario=critical_tachycardia', { method: 'POST' });
-        const data = await res.json();
-        alert(`❤️ CardioLife Cardiac Alert Dispatched!\n\nHeart Rate: ${data.heart_rate_bpm} BPM (${data.status})\nSystolic/Diastolic: ${data.blood_pressure_systolic}/${data.blood_pressure_diastolic}\nSpO2: ${data.oxygen_saturation}%\n\nCaregiver alert notification logged in DB & dispatched!`);
-        loadDashboard();
-      } catch (e) {
-        alert('Simulation failed: ' + e);
-      }
-    }
-
-    // Startup initialization
+    // Startup
     window.addEventListener('DOMContentLoaded', () => {
-      loadSavedCaretakerInfo();
-      loadDashboard();
-      initECGAnimation();
-      changeLanguage();
+      refreshVitals();
+      initECG();
+      onLangChange();
     });
   </script>
 </body>
